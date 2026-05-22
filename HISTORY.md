@@ -1,5 +1,19 @@
 # HISTORY.md
 
+## 2026-05-22 (v0.5.0 - 대용량 데이터 파이프라인 및 LOD 레이지 로딩 아키텍처 완벽 구현)
+
+- 작업: clientWidth/Height 기반 캔버스 물리/논리 정밀 매핑으로 크기 잘림 결함 해결, Node 데이터 전처리 파이프라인(`scripts/prepare-data.js`) 구축, 66권 책별 성경 본문 텍스트 및 12,000쌍급 교차 참조 JSON 청크 자동 빌드, 캔버스 2단계 LOD(글로벌 랜드마크 -> 호버/액티브 책 세부망 병합) 비동기 렌더러 구현, `ReferenceCard` 비동기 본문 fetch 및 메모리 캐싱, 스켈레톤 로딩 바 적용
+- 변경 파일:
+  - `scripts/prepare-data.js` [NEW]: 책별 본문 텍스트(bible-text/ko(en)/<bookIndex>.json) 및 책별 교차 참조(cross-references/<bookIndex>.json) 분할 청크 생성 스크립트 작성
+  - `src/components/NetworkCanvas.tsx`: clientWidth/Height 기반 ResizeObserver 크기 추출, 캔버스 인라인 CSS w-full h-full 바인딩, 최초 글로벌 랜드마크 교차 참조(/data/cross-references.json) 1단계 선패치, 66권 축 책 영역 호버/액티브 시 해당 책의 세부 참조선 비동기 fetch/merge(2단계 LOD) 구현, 우측 상단 '세부 참조망 동적 병합 중...' 로딩 오버레이 UI 구현
+  - `src/components/ReferenceCard.tsx`: 대형 JSON 정적 임포트 완전 제거, useEffect 기반 책별 본문 비동기 fetch(fetchBookText), 전역 메모리 캐시(textCache), 로딩 중 스켈레톤 로딩 바 UI 적용
+- 검증:
+  - 로컬 `npm.cmd run typecheck` (tsc): 무경고 패스
+  - 로컬 `npm.cmd run build` (tsc -b && vite build): dist/ 정적 SPA 빌드 초고속(1.25s) 무오류 완수
+- 결과: 성공 (LOD 2단계 레이지 로딩 탑재 및 캔버스 크기 잘림 완치)
+- 후속 작업:
+  - 필터: 구약↔신약 외 주제별, weight별 정밀 슬라이더 필터링
+
 ## 2026-05-22 (P1 & P2 고도화 개발 및 감사 헌사 UI/문서 최종 탑재)
 
 - 작업: 교차 참조 인터랙션 안정성 확보(120ms 호버 디바운스, 클릭 핀 고정), 국문 개역한글(1961) 성경 로컬 DB 생성 및 한/영 다국어 듀얼 레이아웃 탑재, 모바일 60FPS 최적화(DPR 1.5 제한 및 터치 히트 반경 18px), 오리지널 시각 예술 영감(Chris Harrison & OpenBible.info) 감사 헌사 UI/문서 보강

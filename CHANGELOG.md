@@ -1,5 +1,29 @@
 # CHANGELOG.md
 
+## v0.5.0 - 2026-05-22
+
+### Added
+- **clientWidth/Height 기반 캔버스 물리/논리 정밀 매핑 (Bug Fix)**:
+  - 고DPI 및 스크린 배율 환경에서 캔버스 바닥 영역이 잘리고 위쪽 영역만 노출되던 DPI 렌더링 매핑 결함을 완벽히 수정
+  - `ResizeObserver` 상에서 `entry.target.clientWidth/Height` 논리 픽셀을 정밀하게 추출하고, `<canvas>`의 인라인 CSS를 `width: '100%', height: '100%'`로 강제 바인딩하여 모든 기기/배율에서 컨테이너 꽉 차게 잘림 없는 완전 렌더링 보장
+- **66권 책별 대규모 데이터셋 분할 및 전처리 파이프라인 구축 (Performance)**:
+  - 11,907쌍의 대규모 교차 참조와 66권 전체 성경 구절 데이터를 다루기 위한 전처리 파이프라인 구축 (`scripts/prepare-data.js`)
+  - 66권 책별 한국어(개역한글 1961)/영어(KJV) 본문 텍스트 JSON 청크 및 책별 교차 참조 JSON 청크 분할 빌드 완수 (`public/data/bible-text/` 및 `public/data/cross-references/`)
+- **2단계 Level of Detail (LOD) 비동기 교차 참조 렌더러 탑재 (Aesthetics)**:
+  - 최초 로딩 시에는 가벼운 글로벌 대표 랜드마크 교차 참조(/data/cross-references.json, 16쌍)만 1단계 선패치하여 캔버스를 초고속 렌더링
+  - 성경 축 영역 호버 또는 액티브(Active/Pinned) 상태 전환 시, 해당 책의 세부 교차 참조 JSON을 비동기 fetch하여 기존 좌표 맵에 dynamic merge하는 2단계 LOD 렌더링 탑재
+  - 세부 참조망 비동기 병합이 일어날 때, 우측 상단에 미려하게 반짝이는 `세부 참조망 동적 병합 중...` 로딩 오버레이 인디케이터를 띄워 Premium UI 감각 제공
+- **ReferenceCard 성경 본문 레이지 로딩 및 스켈레톤 UI 적용 (UX)**:
+  - 수십 메가바이트의 번들 낭비를 유발하던 대형 JSON 정적 임포트를 완전히 철폐하고, 구절 정보 갱신 시 `bookIndex`에 맞춰 필요한 성경 책 본문 JSON 파일만 dynamic fetch 적용
+  - 비동기 로딩을 위한 전역 메모리 캐시(`textCache`)를 도입하여 동일 책에 대한 네트워크 중복 요청을 원천 배제
+  - fetch 수행 동안 사용자 지연 감각을 고급스럽게 정제하기 위해 반짝이는 스켈레톤(Skeleton Screen) 로딩 바 애니메이션 적용
+
+### Verification
+- `npm.cmd run typecheck` (tsc): 무경고 100% 통과 (tsc --noEmit)
+- `npm.cmd run build` (tsc -b && vite build): 2,091개 모듈 dist 정적 번들로 초고속(1.25s) 무오류 빌드 성공
+
+---
+
 ## v0.4.0 - 2026-05-22
 
 ### Added

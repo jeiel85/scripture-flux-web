@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { scaleLinear } from 'd3-scale';
 import books from '../data/books.json';
 import verseIndex from '../data/verse-index.json';
-import rawCrossReferences from '../data/cross-references.json';
 import { toGlobalVerseOffset } from '../utils/projection';
 import { getBezierHeight, distanceToBezier } from '../utils/geometry';
 
@@ -54,16 +53,84 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   // 0. 접근성 및 키보드 상태 선언
   const [isFocused, setIsFocused] = useState(false);
 
-  // 1. 창 크기 변화 대응 (Responsive Layout)
+  // LOD(Level of Detail) 2단계 레이지 로딩 상태
+  const [initialLinks, setInitialLinks] = useState<any[]>([]);
+  const [detailedLinks, setDetailedLinks] = useState<any[]>([]);
+  const [loadedBooks, setLoadedBooks] = useState<Set<number>>(new Set());
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  // 최초 1회: 글로벌 대표 교차 참조 데이터 페치 (LOD Level 1)
+  useEffect(() => {
+    const loadInitialReferences = async () => {
+      try {
+        const response = await fetch('./data/cross-references.json');
+        if (!response.ok) throw new Error('Failed to load initial references');
+        const data = await response.json();
+        setInitialLinks(data);
+      } catch (err) {
+        console.error('Failed to load initial references:', err);
+      }
+    };
+    loadInitialReferences();
+  }, []);
+
+  // 책별 세부 교차 참조 비동기 패치 함수 (LOD Level 2)
+  const loadBookDetails = async (bookIdx: number) => {
+    if (loadedBooks.has(bookIdx)) return;
+    setIsLoadingDetails(true);
+    try {
+      const response = await fetch(`./data/cross-references/${bookIdx}.json`);
+      if (!response.ok) throw new Error(`Failed to load cross-references for book ${bookIdx}`);
+      const data = await response.json();
+      
+      setDetailedLinks((prev) => {
+        const merged = [...prev];
+        const existingKeys = new Set(merged.map(item => `${item[0]}-${item[1]}-${item[2]}-${item[3]}-${item[4]}-${item[5]}`));
+        
+        data.forEach((item: any) => {
+          const key = `${item[0]}-${item[1]}-${item[2]}-${item[3]}-${item[4]}-${item[5]}`;
+          if (!existingKeys.has(key)) {
+            merged.push(item);
+            existingKeys.add(key);
+          }
+        });
+        return merged;
+      });
+      setLoadedBooks((prev) => {
+        const next = new Set(prev);
+        next.add(bookIdx);
+        return next;
+      });
+    } catch (err) {
+      console.error(`Failed to load cross-references for book ${bookIdx}:`, err);
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  // activeLink나 pinnedLink 활성화 시 관련 구절의 세부 교차 참조도 백그라운드 선패치 수행
+  useEffect(() => {
+    if (activeLink) {
+      loadBookDetails(activeLink.source.bookIndex);
+      loadBookDetails(activeLink.target.bookIndex);
+    }
+    if (pinnedLink) {
+      loadBookDetails(pinnedLink.source.bookIndex);
+      loadBookDetails(pinnedLink.target.bookIndex);
+    }
+  }, [activeLink, pinnedLink]);
+
+  // 1. 창 크기 변화 대응 (Responsive Layout) - clientWidth/Height 기반 정밀 보정
   useEffect(() => {
     if (!containerRef.current) return;
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
+        const width = entry.target.clientWidth;
+        const height = entry.target.clientHeight;
         setDimensions({
           width: Math.max(320, width),
-          height: width < 600 ? 400 : Math.max(400, height),
+          height: Math.max(300, height),
         });
       }
     });
@@ -79,11 +146,26 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       .range([PADDING_X, dimensions.width - PADDING_X]);
   }, [dimensions.width]);
 
-  // 3. raw 교차 참조 튜플 데이터를 렌더링에 적합한 좌표 링크 객체로 사전 가공 (useMemo)
+  // 병합된 교차 참조 튜플 (initial + detailed)
+  const combinedReferences = useMemo(() => {
+    const merged = [...initialLinks];
+    const existingKeys = new Set(merged.map(item => `${item[0]}-${item[1]}-${item[2]}-${item[3]}-${item[4]}-${item[5]}`));
+    
+    detailedLinks.forEach(item => {
+      const key = `${item[0]}-${item[1]}-${item[2]}-${item[3]}-${item[4]}-${item[5]}`;
+      if (!existingKeys.has(key)) {
+        merged.push(item);
+        existingKeys.add(key);
+      }
+    });
+    return merged;
+  }, [initialLinks, detailedLinks]);
+
+  // 3. 병합된 교차 참조 데이터를 렌더링에 적합한 좌표 링크 객체로 사전 가공 (useMemo)
   const allLinks = useMemo<RenderLink[]>(() => {
     const yCoord = dimensions.height - AXIS_Y_OFFSET;
 
-    return rawCrossReferences.map((tuple, index) => {
+    return combinedReferences.map((tuple, index) => {
       const [srcBook, srcCh, srcVs, tgtBook, tgtCh, tgtVs, weight] = tuple;
       
       const sourceRef = { bookIndex: srcBook, chapter: srcCh, verse: srcVs };
@@ -182,12 +264,14 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         const color = isOT ? 'rgba(59, 130, 246, 0.4)' : 'rgba(236, 72, 153, 0.4)';
         const hoverColor = isOT ? 'rgba(59, 130, 246, 0.7)' : 'rgba(236, 72, 153, 0.7)';
 
-        // Hover 책 판단
+        // Hover 책 판단 및 동적 레이지 로드 트리거
         let isBookHovered = false;
         if (mouseRef.current) {
           const { x, y } = mouseRef.current;
           if (x >= startX && x <= endX && y >= axisY - 10 && y <= axisY + 30) {
             isBookHovered = true;
+            // 캔버스 내 책 영역에 마우스가 호버되면 즉시 해당 책의 세부 참조 페치
+            loadBookDetails(i);
           }
         }
 
@@ -527,7 +611,8 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseLeave}
         onClick={handleCanvasClick}
-        className="block cursor-pointer"
+        style={{ width: '100%', height: '100%' }}
+        className="block cursor-pointer w-full h-full"
       />
 
       {/* 키보드 탐색 팁 오버레이 (Premium UI 힌트) */}
@@ -541,6 +626,14 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
           : 'Canvas를 클릭하거나 Tab 키를 누르면 키보드로 탐색할 수 있습니다.'
         }
       </div>
+
+      {/* LOD 비동기 데이터 로딩 인디케이터 (Premium UI 요소) */}
+      {isLoadingDetails && (
+        <div className="absolute top-3 right-4 flex items-center gap-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/35 px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-semibold animate-pulse shadow-lg backdrop-blur-md">
+          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
+          세부 참조망 동적 병합 중...
+        </div>
+      )}
     </div>
   );
 };

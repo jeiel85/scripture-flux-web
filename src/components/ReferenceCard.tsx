@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, ArrowRightLeft, Sparkles, Pin, X } from 'lucide-react';
 import books from '../data/books.json';
-import verseTextsEn from '../data/verse-text.kjv.json';
-import verseTextsKo from '../data/verse-text.ko.json';
 import type { RenderLink } from './NetworkCanvas';
 
 interface ReferenceCardProps {
@@ -11,6 +9,32 @@ interface ReferenceCardProps {
   pinnedLink: RenderLink | null;
   onUnpin: () => void;
 }
+
+// 전역 캐시 객체
+const textCache: {
+  ko: Record<number, Record<string, string>>;
+  en: Record<number, Record<string, string>>;
+} = {
+  ko: {},
+  en: {},
+};
+
+// 책별 텍스트 JSON 비동기 패치 함수
+const fetchBookText = async (bookIdx: number, lang: 'ko' | 'en'): Promise<Record<string, string>> => {
+  if (textCache[lang][bookIdx]) {
+    return textCache[lang][bookIdx];
+  }
+  try {
+    const response = await fetch(`./data/bible-text/${lang}/${bookIdx}.json`);
+    if (!response.ok) throw new Error(`Failed to fetch ${lang} text for book ${bookIdx}`);
+    const data = await response.json();
+    textCache[lang][bookIdx] = data;
+    return data;
+  } catch (error) {
+    console.error(error);
+    return {};
+  }
+};
 
 export const ReferenceCard: React.FC<ReferenceCardProps> = ({ 
   activeLink,
@@ -22,6 +46,19 @@ export const ReferenceCard: React.FC<ReferenceCardProps> = ({
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
+
+  const [texts, setTexts] = useState<{
+    sourceKo: string;
+    sourceEn: string;
+    targetKo: string;
+    targetEn: string;
+  }>({
+    sourceKo: '',
+    sourceEn: '',
+    targetKo: '',
+    targetEn: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -36,17 +73,62 @@ export const ReferenceCard: React.FC<ReferenceCardProps> = ({
     return () => mediaQuery.removeEventListener('change', handleMediaChange);
   }, []);
 
-  // 텍스트 조회용 헬퍼 키 생성 - 영어
-  const getVerseTextEn = (bookIdx: number, chapter: number, verse: number) => {
-    const key = `${bookIdx}.${chapter}.${verse}` as keyof typeof verseTextsEn;
-    return verseTextsEn[key] || "Verse text loaded dynamically in full release.";
-  };
+  const displayLink = pinnedLink || activeLink;
 
-  // 텍스트 조회용 헬퍼 키 생성 - 한국어
-  const getVerseTextKo = (bookIdx: number, chapter: number, verse: number) => {
-    const key = `${bookIdx}.${chapter}.${verse}` as keyof typeof verseTextsKo;
-    return verseTextsKo[key] || "본문 구절은 정식 릴리즈에서 동적으로 로드됩니다.";
-  };
+  useEffect(() => {
+    if (!displayLink) return;
+
+    let isSubscribed = true;
+    setIsLoading(true);
+
+    const loadTexts = async () => {
+      const srcIdx = displayLink.source.bookIndex;
+      const tgtIdx = displayLink.target.bookIndex;
+
+      const srcCh = displayLink.source.chapter;
+      const srcVs = displayLink.source.verse;
+      const tgtCh = displayLink.target.chapter;
+      const tgtVs = displayLink.target.verse;
+
+      const srcKey = `${srcIdx}.${srcCh}.${srcVs}`;
+      const tgtKey = `${tgtIdx}.${tgtCh}.${tgtVs}`;
+
+      try {
+        const [srcKoData, srcEnData, tgtKoData, tgtEnData] = await Promise.all([
+          fetchBookText(srcIdx, 'ko'),
+          fetchBookText(srcIdx, 'en'),
+          fetchBookText(tgtIdx, 'ko'),
+          fetchBookText(tgtIdx, 'en'),
+        ]);
+
+        if (isSubscribed) {
+          setTexts({
+            sourceKo: srcKoData[srcKey] || "구절 정보를 찾을 수 없습니다.",
+            sourceEn: srcEnData[srcKey] || "Verse text not found.",
+            targetKo: tgtKoData[tgtKey] || "구절 정보를 찾을 수 없습니다.",
+            targetEn: tgtEnData[tgtKey] || "Verse text not found.",
+          });
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (isSubscribed) {
+          setTexts({
+            sourceKo: "텍스트 로드 실패",
+            sourceEn: "Failed to load text.",
+            targetKo: "텍스트 로드 실패",
+            targetEn: "Failed to load text.",
+          });
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadTexts();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [displayLink]);
 
   // Reduced Motion 대응 애니메이션 설정
   const animVariants = {
@@ -64,8 +146,6 @@ export const ReferenceCard: React.FC<ReferenceCardProps> = ({
   const animTransition = shouldReduceMotion 
     ? { duration: 0 } 
     : { duration: 0.25, ease: 'easeOut' };
-
-  const displayLink = pinnedLink || activeLink;
 
   return (
     <AnimatePresence>
@@ -142,19 +222,30 @@ export const ReferenceCard: React.FC<ReferenceCardProps> = ({
                 </h4>
                 
                 {/* 다국어 듀얼 레이아웃 */}
-                <div className="space-y-3">
-                  {/* 국문 개역한글 */}
-                  <p className="text-slate-100 font-medium text-lg leading-relaxed pl-2 border-l-2 border-blue-500/40">
-                    "{getVerseTextKo(displayLink.source.bookIndex, displayLink.source.chapter, displayLink.source.verse)}"
-                  </p>
-                  
-                  {/* 영문 KJV */}
-                  <div className="border-t border-dashed border-slate-800/40 pt-2.5 mt-2.5">
-                    <p className="text-slate-400 font-serif text-sm italic pl-2 border-l-2 border-slate-700">
-                      "{getVerseTextEn(displayLink.source.bookIndex, displayLink.source.chapter, displayLink.source.verse)}"
-                    </p>
+                {isLoading ? (
+                  <div className="space-y-3 animate-pulse py-2">
+                    <div className="h-5 bg-slate-800 rounded w-11/12"></div>
+                    <div className="h-5 bg-slate-800 rounded w-9/12"></div>
+                    <div className="border-t border-dashed border-slate-800/40 pt-2.5 mt-2.5">
+                      <div className="h-4 bg-slate-800/60 rounded w-10/12"></div>
+                      <div className="h-4 bg-slate-800/60 rounded w-8/12"></div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* 국문 개역한글 */}
+                    <p className="text-slate-100 font-medium text-lg leading-relaxed pl-2 border-l-2 border-blue-500/40">
+                      "{texts.sourceKo}"
+                    </p>
+                    
+                    {/* 영문 KJV */}
+                    <div className="border-t border-dashed border-slate-800/40 pt-2.5 mt-2.5">
+                      <p className="text-slate-400 font-serif text-sm italic pl-2 border-l-2 border-slate-700">
+                        "{texts.sourceEn}"
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="mt-4 pt-3 border-t border-slate-800/30 flex justify-between text-xs text-slate-400">
                 <span>Testament: {books[displayLink.source.bookIndex].testament}</span>
@@ -190,19 +281,30 @@ export const ReferenceCard: React.FC<ReferenceCardProps> = ({
                 </h4>
                 
                 {/* 다국어 듀얼 레이아웃 */}
-                <div className="space-y-3">
-                  {/* 국문 개역한글 */}
-                  <p className="text-slate-100 font-medium text-lg leading-relaxed pl-2 border-l-2 border-pink-500/40">
-                    "{getVerseTextKo(displayLink.target.bookIndex, displayLink.target.chapter, displayLink.target.verse)}"
-                  </p>
-                  
-                  {/* 영문 KJV */}
-                  <div className="border-t border-dashed border-slate-800/40 pt-2.5 mt-2.5">
-                    <p className="text-slate-400 font-serif text-sm italic pl-2 border-l-2 border-slate-700">
-                      "{getVerseTextEn(displayLink.target.bookIndex, displayLink.target.chapter, displayLink.target.verse)}"
-                    </p>
+                {isLoading ? (
+                  <div className="space-y-3 animate-pulse py-2">
+                    <div className="h-5 bg-slate-800 rounded w-11/12"></div>
+                    <div className="h-5 bg-slate-800 rounded w-9/12"></div>
+                    <div className="border-t border-dashed border-slate-800/40 pt-2.5 mt-2.5">
+                      <div className="h-4 bg-slate-800/60 rounded w-10/12"></div>
+                      <div className="h-4 bg-slate-800/60 rounded w-8/12"></div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* 국문 개역한글 */}
+                    <p className="text-slate-100 font-medium text-lg leading-relaxed pl-2 border-l-2 border-pink-500/40">
+                      "{texts.targetKo}"
+                    </p>
+                    
+                    {/* 영문 KJV */}
+                    <div className="border-t border-dashed border-slate-800/40 pt-2.5 mt-2.5">
+                      <p className="text-slate-400 font-serif text-sm italic pl-2 border-l-2 border-slate-700">
+                        "{texts.targetEn}"
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="mt-4 pt-3 border-t border-slate-800/30 flex justify-between text-xs text-slate-400">
                 <span>Testament: {books[displayLink.target.bookIndex].testament}</span>
