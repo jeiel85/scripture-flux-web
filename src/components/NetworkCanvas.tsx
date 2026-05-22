@@ -31,6 +31,10 @@ interface NetworkCanvasProps {
   pinnedLink: RenderLink | null;
   setPinnedLink: (link: RenderLink | null) => void;
   filterType: 'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT';
+  minWeight: number;
+  searchVerse: VerseRef | null;
+  initialPinnedRefs: { source: VerseRef; target: VerseRef } | null;
+  setInitialPinnedRefs: (refs: { source: VerseRef; target: VerseRef } | null) => void;
 }
 
 const PADDING_X = 60;
@@ -42,6 +46,10 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   pinnedLink,
   setPinnedLink,
   filterType,
+  minWeight,
+  searchVerse,
+  initialPinnedRefs,
+  setInitialPinnedRefs,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -108,7 +116,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     }
   };
 
-  // activeLink나 pinnedLink 활성화 시 관련 구절의 세부 교차 참조도 백그라운드 선패치 수행
+  // activeLink, pinnedLink, searchVerse 활성화 시 관련 구절의 세부 교차 참조도 백그라운드 선패치 수행
   useEffect(() => {
     if (activeLink) {
       loadBookDetails(activeLink.source.bookIndex);
@@ -118,7 +126,11 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       loadBookDetails(pinnedLink.source.bookIndex);
       loadBookDetails(pinnedLink.target.bookIndex);
     }
-  }, [activeLink, pinnedLink]);
+    if (searchVerse) {
+      loadBookDetails(searchVerse.bookIndex);
+    }
+  }, [activeLink, pinnedLink, searchVerse]);
+
 
   // 1. 창 크기 변화 대응 (Responsive Layout) - clientWidth/Height 기반 정밀 보정
   useEffect(() => {
@@ -203,9 +215,13 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     });
   }, [dimensions.height, xScale]);
 
-  // 4. 필터링된 링크만 추출
+  // 4. 필터링된 링크만 추출 (Weight 필터 및 testamentClass 필터 적용)
   const filteredLinks = useMemo(() => {
     return allLinks.filter((link) => {
+      // 1) Weight 필터
+      if (link.weight < minWeight) return false;
+
+      // 2) 신구약 타입 필터
       if (filterType === 'OT_ONLY') {
         return link.testamentClass === 'OT_TO_OT';
       }
@@ -217,7 +233,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       }
       return true;
     });
-  }, [allLinks, filterType]);
+  }, [allLinks, filterType, minWeight]);
 
   // 4-1. 키보드 탐색용 정렬된 링크 리스트 (소스 구절 오프셋 순 오름차순)
   const sortedLinks = useMemo(() => {
@@ -229,6 +245,47 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     if (!activeLink) return null;
     return sortedLinks.findIndex((link) => link.id === activeLink.id);
   }, [activeLink, sortedLinks]);
+
+  // 검색에 매칭되는 링크 개수 계산
+  const searchMatchCount = useMemo(() => {
+    if (!searchVerse) return 0;
+    return filteredLinks.filter((link) => {
+      const isSourceMatch =
+        link.source.bookIndex === searchVerse.bookIndex &&
+        link.source.chapter === searchVerse.chapter &&
+        link.source.verse === searchVerse.verse;
+      const isTargetMatch =
+        link.target.bookIndex === searchVerse.bookIndex &&
+        link.target.chapter === searchVerse.chapter &&
+        link.target.verse === searchVerse.verse;
+      return isSourceMatch || isTargetMatch;
+    }).length;
+  }, [filteredLinks, searchVerse]);
+
+  // 딥링크 복원 (initialPinnedRefs 파싱 후 매칭 링크 복원)
+  useEffect(() => {
+    if (!initialPinnedRefs) return;
+
+    const { source, target } = initialPinnedRefs;
+
+    // 해당 책들의 세부 정보 비동기 로딩 강제 트리거
+    loadBookDetails(source.bookIndex);
+    loadBookDetails(target.bookIndex);
+
+    // 병합된 링크 목록에서 매칭되는 구절 링크 탐색
+    const foundLink = allLinks.find(link => 
+      (link.source.bookIndex === source.bookIndex && link.source.chapter === source.chapter && link.source.verse === source.verse &&
+       link.target.bookIndex === target.bookIndex && link.target.chapter === target.chapter && link.target.verse === target.verse) ||
+      (link.source.bookIndex === target.bookIndex && link.source.chapter === target.chapter && link.target.verse === target.verse &&
+       link.target.bookIndex === source.bookIndex && link.target.chapter === source.chapter && link.target.verse === source.verse)
+    );
+
+    if (foundLink) {
+      setPinnedLink(foundLink);
+      setActiveLink(foundLink);
+      setInitialPinnedRefs(null); // 복원 성공했으므로 초기화
+    }
+  }, [initialPinnedRefs, allLinks]);
 
   // 5. Canvas 고해상도 렌더링 & 애니메이션 루프
   useEffect(() => {
@@ -303,18 +360,40 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       ctx.shadowBlur = 0; // 최적화: glow 제거
       ctx.lineWidth = isMobile ? 0.5 : 0.75;
       
+      const hasSearch = !!searchVerse;
+
       filteredLinks.forEach((link) => {
         // Active Link 및 Pinned Link는 나중에 위에 덧그릴 것이므로 스킵
         if (activeLink && activeLink.id === link.id) return;
         if (pinnedLink && pinnedLink.id === link.id) return;
 
-        // 구신약별 곡선 컬러
-        const strokeColor =
-          link.testamentClass === 'OT_TO_OT'
-            ? 'rgba(59, 130, 246, 0.08)'
-            : link.testamentClass === 'NT_TO_NT'
-            ? 'rgba(236, 72, 153, 0.08)'
-            : 'rgba(16, 185, 129, 0.12)';
+        // 검색 상태일 때 해당 링크가 검색 구절에 매칭되는지 확인
+        const isSourceMatch = hasSearch && 
+          link.source.bookIndex === searchVerse.bookIndex && 
+          link.source.chapter === searchVerse.chapter && 
+          link.source.verse === searchVerse.verse;
+        const isTargetMatch = hasSearch && 
+          link.target.bookIndex === searchVerse.bookIndex && 
+          link.target.chapter === searchVerse.chapter && 
+          link.target.verse === searchVerse.verse;
+        
+        if (isSourceMatch || isTargetMatch) {
+          // 매칭된 검색 결과 링크는 나중에 하이라이트로 덧그리기 위해 패스
+          return;
+        }
+
+        // 구신약별 곡선 컬러 (검색 활성화 상태라면 비매칭 선들을 어둡게 Dimming)
+        let strokeColor = '';
+        if (hasSearch) {
+          strokeColor = 'rgba(255, 255, 255, 0.015)'; // 극도의 Dimming
+        } else {
+          strokeColor =
+            link.testamentClass === 'OT_TO_OT'
+              ? 'rgba(59, 130, 246, 0.08)'
+              : link.testamentClass === 'NT_TO_NT'
+              ? 'rgba(236, 72, 153, 0.08)'
+              : 'rgba(16, 185, 129, 0.12)';
+        }
 
         ctx.strokeStyle = strokeColor;
 
@@ -329,6 +408,52 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, link.x1, link.y1);
         ctx.stroke();
       });
+
+      // 5-2-2. 검색 매칭 링크 하이라이트 덧그리기 (Glow 적용)
+      if (hasSearch) {
+        filteredLinks.forEach((link) => {
+          if (activeLink && activeLink.id === link.id) return;
+          if (pinnedLink && pinnedLink.id === link.id) return;
+
+          const isSourceMatch = 
+            link.source.bookIndex === searchVerse.bookIndex && 
+            link.source.chapter === searchVerse.chapter && 
+            link.source.verse === searchVerse.verse;
+          const isTargetMatch = 
+            link.target.bookIndex === searchVerse.bookIndex && 
+            link.target.chapter === searchVerse.chapter && 
+            link.target.verse === searchVerse.verse;
+          
+          if (!isSourceMatch && !isTargetMatch) return;
+
+          const h = getBezierHeight(link.x0, link.x1);
+          const cp1x = link.x0;
+          const cp1y = link.y0 - h;
+          const cp2x = link.x1;
+          const cp2y = link.y1 - h;
+
+          ctx.save();
+          // Glow 효과와 선명한 에메랄드 그린선
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#10b981';
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = isMobile ? 1.2 : 1.8;
+
+          ctx.beginPath();
+          ctx.moveTo(link.x0, link.y0);
+          ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, link.x1, link.y1);
+          ctx.stroke();
+
+          // 양 앵커에 작은 점 표시
+          ctx.fillStyle = '#10b981';
+          ctx.shadowBlur = 5;
+          ctx.beginPath();
+          ctx.arc(link.x0, link.y0, 2.5, 0, Math.PI * 2);
+          ctx.arc(link.x1, link.y1, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
 
       // 5-3. 활성화된 단 하나의 링크(Active Link)만 강력하게 강조하여 덧그리기 (Glow 적용)
       if (activeLink && (!pinnedLink || pinnedLink.id !== activeLink.id)) {
@@ -626,6 +751,14 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
           : 'Canvas를 클릭하거나 Tab 키를 누르면 키보드로 탐색할 수 있습니다.'
         }
       </div>
+
+      {/* 검색 집중 탐색 모드 프리미엄 배지 */}
+      {searchVerse && (
+        <div className="absolute top-3 left-4 flex items-center gap-2 bg-[#070b16]/85 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold shadow-lg backdrop-blur-md transition-all">
+          <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+          🔍 {books[searchVerse.bookIndex].ko} {searchVerse.chapter}:{searchVerse.verse} 집중 탐색 ({searchMatchCount}개 참조)
+        </div>
+      )}
 
       {/* LOD 비동기 데이터 로딩 인디케이터 (Premium UI 요소) */}
       {isLoadingDetails && (

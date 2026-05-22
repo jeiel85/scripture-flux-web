@@ -1,13 +1,80 @@
-import { useState } from 'react';
-import { NetworkCanvas, type RenderLink } from './components/NetworkCanvas';
+import { useState, useEffect } from 'react';
+import { NetworkCanvas, type RenderLink, type VerseRef } from './components/NetworkCanvas';
 import { ReferenceCard } from './components/ReferenceCard';
-import { Github, BookOpen, Layers, ShieldCheck } from 'lucide-react';
+import { Github, BookOpen, Layers, ShieldCheck, Search, RefreshCw, Sliders } from 'lucide-react';
 import rawCrossReferences from './data/cross-references.json';
+import books from './data/books.json';
+import verseIndex from './data/verse-index.json';
 
 function App() {
   const [activeLink, setActiveLink] = useState<RenderLink | null>(null);
   const [pinnedLink, setPinnedLink] = useState<RenderLink | null>(null);
   const [filterType, setFilterType] = useState<'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT'>('ALL');
+
+  // 프리미엄 기능 3종 관련 신규 상태 정의
+  const [minWeight, setMinWeight] = useState<number>(0.1);
+  const [searchVerse, setSearchVerse] = useState<VerseRef | null>(null);
+  const [initialPinnedRefs, setInitialPinnedRefs] = useState<{ source: VerseRef; target: VerseRef } | null>(null);
+
+  // 3단 검색 셀렉터 로컬 상태
+  const [searchBookIdx, setSearchBookIdx] = useState<number>(-1);
+  const [searchChapter, setSearchChapter] = useState<number>(-1);
+  const [searchVerseNum, setSearchVerseNum] = useState<number>(-1);
+
+  // 1. URL Hash 기반 공유 복원 (Deep Link 마운트 처리)
+  useEffect(() => {
+    const handleHashRestore = () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#')) {
+        const parts = hash.slice(1).split('-');
+        if (parts.length === 2) {
+          const parsePart = (part: string) => {
+            const match = part.match(/^([A-Z0-9]+)\.(\d+)\.(\d+)$/);
+            if (!match) return null;
+            const [, bookId, chStr, vsStr] = match;
+            const bookIdx = books.findIndex(b => b.id === bookId);
+            if (bookIdx === -1) return null;
+            return {
+              bookIndex: bookIdx,
+              chapter: parseInt(chStr, 10),
+              verse: parseInt(vsStr, 10)
+            };
+          };
+          const source = parsePart(parts[0]);
+          const target = parsePart(parts[1]);
+          if (source && target) {
+            setInitialPinnedRefs({ source, target });
+          }
+        }
+      }
+    };
+
+    handleHashRestore();
+
+    window.addEventListener('hashchange', handleHashRestore);
+    return () => window.removeEventListener('hashchange', handleHashRestore);
+  }, []);
+
+  // 2. pinnedLink 변경 시 URL Hash 동적 갱신
+  useEffect(() => {
+    if (pinnedLink) {
+      const srcBook = books[pinnedLink.source.bookIndex].id;
+      const srcCh = pinnedLink.source.chapter;
+      const srcVs = pinnedLink.source.verse;
+      const tgtBook = books[pinnedLink.target.bookIndex].id;
+      const tgtCh = pinnedLink.target.chapter;
+      const tgtVs = pinnedLink.target.verse;
+      
+      const newHash = `#${srcBook}.${srcCh}.${srcVs}-${tgtBook}.${tgtCh}.${tgtVs}`;
+      if (window.location.hash !== newHash) {
+        window.location.hash = newHash;
+      }
+    } else {
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  }, [pinnedLink]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#0a0f1e] text-slate-200">
@@ -95,35 +162,156 @@ function App() {
           </div>
         </section>
 
-        {/* 3. 컨트롤 패널 - 필터 버튼 목록 */}
-        <section className="flex flex-wrap items-center justify-between gap-4 glass-card p-3 rounded-2xl border border-slate-800/50">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-emerald-400 ml-2" />
-            <span className="text-sm font-semibold text-slate-300">네트워크 필터:</span>
+        {/* 3. 통합 컨트롤 및 설정 대시보드 */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 glass-card p-4 rounded-2xl border border-slate-800/50 bg-slate-950/20">
+          
+          {/* A. 네트워크 필터 */}
+          <div className="lg:col-span-5 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-emerald-400 ml-1" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">신구약 도메인 필터</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: 'ALL', label: '전체' },
+                { id: 'OT_ONLY', label: '구약 내부 (OT ↔ OT)' },
+                { id: 'NT_ONLY', label: '신약 내부 (NT ↔ NT)' },
+                { id: 'OT_NT', label: '교차 연결 (OT ↔ NT)' }
+              ].map((btn) => (
+                <button
+                  key={btn.id}
+                  onClick={() => {
+                    setFilterType(btn.id as 'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT');
+                    setActiveLink(null);
+                  }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
+                    filterType === btn.id
+                      ? 'bg-emerald-500 text-[#0a0f1e] shadow-lg shadow-emerald-500/20 font-bold'
+                      : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-slate-800/40'
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'ALL', label: '전체 보기' },
-              { id: 'OT_ONLY', label: '구약 내부만 (OT ↔ OT)' },
-              { id: 'NT_ONLY', label: '신약 내부만 (NT ↔ NT)' },
-              { id: 'OT_NT', label: '구약 ↔ 신약 연결만 (OT ↔ NT)' }
-            ].map((btn) => (
-              <button
-                key={btn.id}
-                onClick={() => {
-                  setFilterType(btn.id as 'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT');
-                  setActiveLink(null); // 필터링 시 활성 링크 초기화
+
+          {/* B. Weight 가중치 슬라이더 */}
+          <div className="lg:col-span-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-emerald-400 ml-1" />
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">연관 강도(Weight) 필터</span>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-1.5 py-0.5 rounded">
+                min. {minWeight.toFixed(2)}
+              </span>
+            </div>
+            <div className="flex items-center h-full px-1">
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={minWeight}
+                onChange={(e) => setMinWeight(parseFloat(e.target.value))}
+                className="w-full accent-emerald-500 bg-slate-900 h-1.5 rounded-lg appearance-none cursor-pointer border border-slate-800/60"
+              />
+            </div>
+          </div>
+
+          {/* C. 3단 구절 검색 집중 탐색기 */}
+          <div className="lg:col-span-4 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-emerald-400 ml-1" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">구절 집중 탐색 (Dimming)</span>
+            </div>
+            <div className="flex items-center gap-1.5 w-full">
+              <select
+                value={searchBookIdx}
+                onChange={(e) => {
+                  const idx = parseInt(e.target.value, 10);
+                  setSearchBookIdx(idx);
+                  setSearchChapter(-1);
+                  setSearchVerseNum(-1);
+                  setSearchVerse(null);
                 }}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                  filterType === btn.id
-                    ? 'bg-emerald-500 text-[#0a0f1e] shadow-lg shadow-emerald-500/20 font-bold'
-                    : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-slate-800/40'
-                }`}
+                className="flex-grow bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/70 transition-all"
               >
-                {btn.label}
-              </button>
-            ))}
+                <option value={-1} className="bg-[#0a0f1e]">책 선택</option>
+                {books.map((b) => (
+                  <option key={b.index} value={b.index} className="bg-[#0a0f1e]">
+                    {b.ko}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={searchChapter}
+                disabled={searchBookIdx === -1}
+                onChange={(e) => {
+                  const ch = parseInt(e.target.value, 10);
+                  setSearchChapter(ch);
+                  setSearchVerseNum(-1);
+                  setSearchVerse(null);
+                }}
+                className="w-16 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-xl px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/70 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <option value={-1} className="bg-[#0a0f1e]">장</option>
+                {searchBookIdx !== -1 &&
+                  Array.from({ length: books[searchBookIdx].chapters }).map((_, i) => (
+                    <option key={i} value={i + 1} className="bg-[#0a0f1e]">
+                      {i + 1}
+                    </option>
+                  ))}
+              </select>
+
+              <select
+                value={searchVerseNum}
+                disabled={searchChapter === -1}
+                onChange={(e) => {
+                  const vs = parseInt(e.target.value, 10);
+                  setSearchVerseNum(vs);
+                  if (vs !== -1) {
+                    setSearchVerse({
+                      bookIndex: searchBookIdx,
+                      chapter: searchChapter,
+                      verse: vs
+                    });
+                  } else {
+                    setSearchVerse(null);
+                  }
+                }}
+                className="w-16 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-xs text-slate-300 rounded-xl px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/70 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <option value={-1} className="bg-[#0a0f1e]">절</option>
+                {searchBookIdx !== -1 && searchChapter !== -1 &&
+                  Array.from({
+                    length: verseIndex.books[searchBookIdx].chapterVerseCounts[searchChapter - 1] || 0
+                  }).map((_, i) => (
+                    <option key={i} value={i + 1} className="bg-[#0a0f1e]">
+                      {i + 1}
+                    </option>
+                  ))}
+              </select>
+
+              {(searchBookIdx !== -1 || searchVerse) && (
+                <button
+                  onClick={() => {
+                    setSearchBookIdx(-1);
+                    setSearchChapter(-1);
+                    setSearchVerseNum(-1);
+                    setSearchVerse(null);
+                  }}
+                  className="p-1.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-rose-400 hover:text-rose-300 rounded-xl transition-all shadow-md"
+                  title="집중 탐색 초기화"
+                >
+                  <RefreshCw className="w-4.5 h-4.5" />
+                </button>
+              )}
+            </div>
           </div>
+
         </section>
 
         {/* 4. Canvas 시각화 보드 */}
@@ -134,6 +322,10 @@ function App() {
             pinnedLink={pinnedLink}
             setPinnedLink={setPinnedLink}
             filterType={filterType}
+            minWeight={minWeight}
+            searchVerse={searchVerse}
+            initialPinnedRefs={initialPinnedRefs}
+            setInitialPinnedRefs={setInitialPinnedRefs}
           />
           
           {/* 마우스 가이드 헬퍼 */}

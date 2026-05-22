@@ -1,5 +1,18 @@
 # HISTORY.md
 
+## 2026-05-22 (v0.6.0 - 3대 프리미엄 편의 기능 대통합)
+
+- 작업: 특정 구절 중심 집중 탐색 및 Dimming 모드 구현(책/장/절 3단 Dropdown UI 지원 및 비매칭 곡선 0.015 알파 투명도 dimming & 에메랄드 네온 하이라이팅), Weight(연관 강도) 정밀 슬라이더(0.1 ~ 1.0) 조율기 탑재로 캔버스 복잡도 및 렌더링 밀도 제어, URL Hash 기반 딥링크 공유 및 비동기 복원 시스템 수립(핀 고정 시 `#GEN.1.1-JHN.1.1` 해시 갱신 및 최초 진입 시 비동기 lazy load 후 자동 복원)
+- 변경 파일:
+  - `src/components/NetworkCanvas.tsx`: minWeight, searchVerse, initialPinnedRefs Props 추가, filteredLinks useMemo 내 minWeight 임계값 필터링 연동, searchMatchCount useMemo 및 🔍 집중 탐색 프리미엄 Glassmorphism 배지 오버레이 추가, draw() 루프 내 비매칭 곡선 극도 투명도(alpha 0.015) 완화 dimming 렌더링 및 매칭 곡선 에메랄드 네온 glow 하이라이트 덧그리기 이식, deep-link 복원을 위한 initialPinnedRefs 비동기 fetch/RESTORE useEffect 연동 및 block-scoped 변수 선언 순서 결함 완치
+  - `src/App.tsx`: minWeight, searchVerse, initialPinnedRefs 상태 훅 추가, URL Hash 딥링크 공유 마운트/파싱 복원 Effect 작성, 핀 고정 시 Hash 동적 갱신 Effect 작성, 3단 검색 셀렉터(searchBookIdx, searchChapter, searchVerseNum) 로컬 상태 탑재 및 통합 컨트롤 Glassmorphic 가로 그리드 대시보드(도메인 필터, Weight 슬라이더, 3단 콤보 검색) 구축, `NetworkCanvas` Props 풀 바인딩 
+- 검증:
+  - 로컬 `npm run typecheck` (tsc): 무경고 패스 (0개 에러)
+  - 로컬 `npm run build` (tsc -b && vite build): 2,091개 모듈 트랜스폼 및 6.45초 만에 dist/ 정적 SPA 빌드 무오류 완수
+- 결과: 성공 (3대 프리미엄 대시보드 및 복원 엔진 탑재 완료)
+- 후속 작업:
+  - 성경 본문 번역 선택 구조 확장 (예: 쉬운성경, NIV 등)
+
 ## 2026-05-22 (v0.5.0 - 대용량 데이터 파이프라인 및 LOD 레이지 로딩 아키텍처 완벽 구현)
 
 - 작업: clientWidth/Height 기반 캔버스 물리/논리 정밀 매핑으로 크기 잘림 결함 해결, Node 데이터 전처리 파이프라인(`scripts/prepare-data.js`) 구축, 66권 책별 성경 본문 텍스트 및 12,000쌍급 교차 참조 JSON 청크 자동 빌드, 캔버스 2단계 LOD(글로벌 랜드마크 -> 호버/액티브 책 세부망 병합) 비동기 렌더러 구현, `ReferenceCard` 비동기 본문 fetch 및 메모리 캐싱, 스켈레톤 로딩 바 적용
