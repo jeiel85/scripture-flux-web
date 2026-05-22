@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NetworkCanvas, type RenderLink, type VerseRef } from './components/NetworkCanvas';
 import { ReferenceCard } from './components/ReferenceCard';
+import { SearchBar } from './components/SearchBar';
 import { Github, BookOpen, Layers, ShieldCheck, Search, RefreshCw, Sliders } from 'lucide-react';
 import rawCrossReferences from './data/cross-references.json';
 import books from './data/books.json';
@@ -76,6 +77,21 @@ function App() {
     }
   }, [pinnedLink]);
 
+  // 3. 지능형 검색 바 작동용 전용 검색 및 클리어 핸들러
+  const handleSearch = (bookIndex: number, chapter: number, verse: number) => {
+    setSearchBookIdx(bookIndex);
+    setSearchChapter(chapter);
+    setSearchVerseNum(verse);
+    setSearchVerse({ bookIndex, chapter, verse });
+  };
+
+  const handleClearSearch = () => {
+    setSearchBookIdx(-1);
+    setSearchChapter(-1);
+    setSearchVerseNum(-1);
+    setSearchVerse(null);
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#0a0f1e] text-slate-200">
       
@@ -90,7 +106,7 @@ function App() {
               <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 m-0">
                 ScriptureFlux
                 <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
-                  v0.2.0 MVP
+                  v0.8.0 Premium
                 </span>
               </h1>
             </div>
@@ -220,12 +236,28 @@ function App() {
             </div>
           </div>
 
-          {/* C. 3단 구절 검색 집중 탐색기 */}
-          <div className="lg:col-span-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-emerald-400 ml-1" />
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">구절 집중 탐색 (Dimming)</span>
+          {/* C. 지능형 구절 검색 및 집중 탐색기 */}
+          <div className="lg:col-span-4 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-emerald-400 ml-1" />
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">구절 지능형 검색 (Dimming)</span>
+              </div>
+              {searchVerse && (
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 animate-pulse">
+                  집중 모드 작동 중
+                </span>
+              )}
             </div>
+
+            {/* 지능형 자동완성 검색 바 */}
+            <SearchBar
+              onSearch={handleSearch}
+              searchVerse={searchVerse}
+              onClear={handleClearSearch}
+            />
+
+            {/* 보조 하이브리드 3단 셀렉터 */}
             <div className="flex items-center gap-1.5 w-full">
               <select
                 value={searchBookIdx}
@@ -297,12 +329,7 @@ function App() {
 
               {(searchBookIdx !== -1 || searchVerse) && (
                 <button
-                  onClick={() => {
-                    setSearchBookIdx(-1);
-                    setSearchChapter(-1);
-                    setSearchVerseNum(-1);
-                    setSearchVerse(null);
-                  }}
+                  onClick={handleClearSearch}
                   className="p-1.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-rose-400 hover:text-rose-300 rounded-xl transition-all shadow-md"
                   title="집중 탐색 초기화"
                 >

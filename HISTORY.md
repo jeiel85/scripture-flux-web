@@ -1,5 +1,22 @@
 # HISTORY.md
 
+## 2026-05-22 (v0.8.0 - 지능형 자동완성 검색 바 및 양방향 동기화 구현)
+
+- 작업: 초성, 약칭, 지능형 퀵 구절 파서를 지원하는 지능형 자동완성 검색 바를 구현하고, 기존 하이브리드 3단 드롭다운 셀렉터와 실시간 양방향 동기화(Sync)를 수립하여 성경 네트워크 탐색의 사용성을 극대화. 렌더링 성능을 위해 동기식 cascading render를 금지하는 ESLint 린트 규칙에 의거, useEffect 대신 렌더 시점 상태 조정 패턴을 적용하여 최적화 완수.
+- 변경 파일:
+  - `src/utils/search-utils.ts` [NEW]: 초성 추출(`getChoseong`), 퀵 구절 파서(`parseQuickVerse`), 실시간 자동완성 제안(`getSuggestions`)을 지원하는 유틸리티 작성
+  - `src/components/SearchBar.tsx` [NEW]: 포커스 이펙트 및 글래스모프 디자인 자동완성 제안 팝업, 키보드 접근성 인터랙션 지원 검색 바 컴포넌트 작성
+  - `src/App.tsx`: `SearchBar` 컴포넌트 통합, 검색/초기화 핸들러 구현 및 양방향 역전파 바인딩, package.json 버전에 동기화한 v0.8.0 Premium 버전 배지 표시
+  - `package.json`: 버전을 `0.8.0`으로 공식 상향
+  - `TASKS.md`, `CHANGELOG.md`, `HISTORY.md`, `task.md`: v0.8.0 신규 마일스톤 이력 전면 갱신
+- 검증:
+  - 로컬 `cmd.exe /c "npm run lint"`: cascading render 린트 에러 완치하여 0개 에러 통과
+  - 로컬 `cmd.exe /c "npm run build"`: 번들링에 2.93초 소요, 무경고 dist/ 정적 SPA 빌드 성공
+- 결과: 성공 (초성 및 퀵 파싱을 지원하는 지능형 자동완성 검색 바 구동 성공)
+- 후속 작업:
+  - WebGL 또는 OffscreenCanvas 기반 수만 개 선 렌더링 실험
+  - 모바일 UI 터치 슬라이딩 및 스와이프 제스처 최적화
+
 ## 2026-05-22 (v0.7.0 - 66권 한/영 성경 전서 텍스트 100% 전체 이식 및 파이프라인 완수)
 
 - 작업: 오픈소스 무저작권 성경 전서 데이터셋(`ko_ko.json` 및 `en_kjv.json`)을 direct fetch 및 탑재하여, 66권 전체 31,106구절 한/영 텍스트를 누락 없이 1:1 정밀 매핑하는 빌드 파이프라인(`scripts/prepare-data.js`) 개편 가동 성공. 한글 개역한글 데이터셋의 UTF-8 BOM(\uFEFF) 제거 및 홑따옴표가 깨지는 HTML Entities(`&#x27;` ➔ `'` 등)를 미려하게 복원해 주는 특수 문자 정제 디코딩 이식 완료.

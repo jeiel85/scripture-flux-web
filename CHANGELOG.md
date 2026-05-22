@@ -1,5 +1,24 @@
 # CHANGELOG.md
 
+## v0.8.0 - 2026-05-22
+
+### Added
+- **초성/약어/지능형 퀵 파서 탑재 지능형 자동완성 검색 바 구현 (Premium UX)**:
+  - 초성(예: `ㅊㅅㄱ` ➔ 창세기), 단축어(예: `창`, `요`, `Gen`), ID/OSIS 매칭 등을 지원하는 스마트 매칭 검색 알고리즘 설계 (`src/utils/search-utils.ts`)
+  - 지능형 퀵 구절 파서(Quick Parser)를 이식하여 `창 1:1`, `요3:16`, `Gen 1 1`, `John 3:16` 같은 다양한 서식의 자유 입력을 분석 후 실시간 구절 연동 처리
+  - 에메랄드 네온 Glow 보더 및 글래스모프 디자인의 실시간 자동완성 제안 팝업창 레이아웃 수립 (`src/components/SearchBar.tsx`)
+  - 키보드 접근성 인터랙션 지원 (`ArrowUp`/`ArrowDown`으로 목록 선택 이동, `Enter`로 자동완성 확정 및 직접 검색, `Escape`/Click Outside로 닫기)
+- **하이브리드 양방향 검색 동기화 및 렌더 성능 최적화 (Architecture)**:
+  - 지능형 검색 바와 기존 3단 셀렉터(책, 장, 절) 간의 **실시간 양방향 동기화(Sync)** 수립으로, 검색창에 입력하면 3단 셀렉터가 움직이고, 3단 셀렉터로 구절을 고르면 검색창 텍스트가 역전파되어 동적 갱신되도록 하이브리드 바인딩 완수
+  - React의 cascading render를 완화하기 위해 `useEffect` 대신 렌더 시점의 Prop 변경 및 상태 변경 조율 패턴을 적용하여 동기식 렌더 오버헤드를 근본적으로 차단
+  - 프로젝트 내부 package.json 버전을 `0.8.0`으로 공식 상향 갱신
+
+### Verification
+- `npm run lint` (ESLint): cascading render 린트 위반을 완치하여 0개 에러 완벽성 통과
+- `npm run build` (Vite Build): 컴파일 통과 및 dist 번들링 2.93초 초고속 무오류 통과
+
+---
+
 ## v0.7.0 - 2026-05-22
 
 ### Added

@@ -97,10 +97,18 @@
 - [x] 66권 정적 파일 분할 저장(`public/data/bible-text/ko/[0-65].json`, `en/[0-65].json`) 및 dynamic fetch 동작 안정성 100% 검증
 - [x] 로컬 `npm run lint` 및 `npm run build` 정적 번들 초고속 무오류 통과
 
+## v0.8.0 - 지능형 자동완성 검색 바 및 양방향 동기화 구현 (완료)
+
+- [x] 초성, 단축어, OSIS, ID 매칭 지능형 검색 및 퀵 구절 파서 유틸리티 설계 (`src/utils/search-utils.ts`)
+- [x] 글래스모프 디자인의 실시간 자동완성 제안 팝업창 및 키보드 접근성 인터랙션 탑재 검색 바 컴포넌트 개발 (`src/components/SearchBar.tsx`)
+- [x] 지능형 검색 바와 기존 3단 셀렉터 간의 실시간 양방향 동기화(Sync) 연동 및 하이브리드 UI 구축 (`src/App.tsx`)
+- [x] React cascading render 방지를 위해 useEffect 대신 렌더 시점 Prop 비교/상태 조정 패턴 적용 및 린트 오류 해결
+- [x] `npm run lint` 및 `npm run build` 정적 dist 번들링 무결성 통과 확인
+
 ## 후속 아이디어
 
 - [ ] 성경 본문 번역 선택 구조 확장 (예: 쉬운성경, NIV 등)
 - [ ] WebGL 또는 OffscreenCanvas 기반 수만 개 선 렌더링 실험
-- [ ] 검색창 자동완성(Autocomplete) 지원 및 모바일 UI 터치 슬라이딩 최적화
+- [ ] 모바일 UI 터치 슬라이딩 및 스와이프 제스처 최적화
 
 
