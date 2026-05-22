@@ -89,6 +89,14 @@
 - [x] URL Hash 기반 딥링크 공유 및 복원 시스템 구현: 핀(Pin) 고정 시 `#GEN.1.1-JHN.1.1` 자동 갱신 및 최초 진입 시 비동기 lazy load 후 자동 복원
 - [x] `npm run build` 정적 번들 100% 무오류 통과 및 정적 SPA 릴리즈 준비 완료
 
+## v0.7.0 - 66권 한/영 성경 전서 텍스트 100% 전체 이식 및 파이프라인 완수 (완료)
+
+- [x] 오픈소스 성경 전서 데이터셋(`ko_ko.json` 및 `en_kjv.json`)을 direct fetch 및 적재 완료
+- [x] `scripts/prepare-data.js` 파이프라인을 개편하여 전체 31,106구절 한/영 텍스트 정밀 1:1 매핑 빌드 완수
+- [x] 한글 개역한글 텍스트의 UTF-8 BOM(\uFEFF) 제거 및 HTML Entities(`&#x27;` ➔ `'` 등) 특수 문자 완벽 정제 디코딩
+- [x] 66권 정적 파일 분할 저장(`public/data/bible-text/ko/[0-65].json`, `en/[0-65].json`) 및 dynamic fetch 동작 안정성 100% 검증
+- [x] 로컬 `npm run lint` 및 `npm run build` 정적 번들 초고속 무오류 통과
+
 ## 후속 아이디어
 
 - [ ] 성경 본문 번역 선택 구조 확장 (예: 쉬운성경, NIV 등)

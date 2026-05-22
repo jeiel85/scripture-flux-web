@@ -1,6 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 
+// HTML Entity 디코딩 헬퍼 함수
+function decodeHtmlEntities(str) {
+  if (!str) return '';
+  return str
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x60;/g, "`")
+    .replace(/&nbsp;/g, " ");
+}
 // 66권 성경의 실제 장별 절 수 (KJV / 개신교 표준 31,102절)
 const chapterVerseCountsData = {
   "GEN": [31, 25, 24, 26, 32, 22, 24, 22, 29, 32, 32, 20, 18, 24, 21, 16, 27, 33, 38, 18, 34, 24, 20, 67, 34, 35, 46, 22, 35, 43, 55, 32, 20, 31, 29, 43, 36, 30, 23, 23, 57, 38, 34, 31, 28, 34, 31, 22, 33, 26], // 50
@@ -207,37 +220,73 @@ function buildPipeline() {
 
   console.log('--- ScriptureFlux Data pre-processing pipeline start ---');
 
+  // 원본 성경 데이터 로드
+  const koRawPath = path.resolve('scripts/ko_ko.json');
+  const enRawPath = path.resolve('scripts/en_kjv.json');
+  
+  if (!fs.existsSync(koRawPath) || !fs.existsSync(enRawPath)) {
+    console.error('Error: Original Bible data files not found in scripts/ folder.');
+    process.exit(1);
+  }
+  
+  console.log('Loading raw Bible datasets...');
+  const koContent = fs.readFileSync(koRawPath, 'utf-8').replace(/^\uFEFF/, '');
+  const enContent = fs.readFileSync(enRawPath, 'utf-8').replace(/^\uFEFF/, '');
+  const koRaw = JSON.parse(koContent);
+  const enRaw = JSON.parse(enContent);
+
   // 1. 66권 책별 성경 본문 분할 생성 (KJV / 개역한글)
   let totalGeneratedVerses = 0;
   for (let b = 0; b < booksOrder.length; b++) {
     const bookId = booksOrder[b];
     const koBookName = booksKoNames[b];
     const enBookName = booksEnNames[b];
-    const chapters = chapterVerseCountsData[bookId];
+
+    const bookDataKo = koRaw[b];
+    const bookDataEn = enRaw[b];
 
     const bookTextKo = {};
     const bookTextEn = {};
 
-    for (let c = 0; c < chapters.length; c++) {
-      const chapterNum = c + 1;
-      const verseCount = chapters[c];
+    const chaptersKo = bookDataKo ? bookDataKo.chapters : [];
+    const chaptersEn = bookDataEn ? bookDataEn.chapters : [];
+    const chaptersCount = Math.max(chaptersKo.length, chaptersEn.length);
 
-      for (let v = 0; v < verseCount; v++) {
+    for (let c = 0; c < chaptersCount; c++) {
+      const chapterNum = c + 1;
+      const versesKo = chaptersKo[c] || [];
+      const versesEn = chaptersEn[c] || [];
+      const versesCount = Math.max(versesKo.length, versesEn.length);
+
+      for (let v = 0; v < versesCount; v++) {
         const verseNum = v + 1;
         const key = `${b}.${chapterNum}.${verseNum}`;
 
-        // 30개 고유 샘플 실데이터 우선 반영
-        if (sampleTextsKo[key]) {
-          bookTextKo[key] = sampleTextsKo[key];
-        } else {
-          bookTextKo[key] = `${koBookName} ${chapterNum}장 ${verseNum}절 말씀입니다. (본문 라이선스 보유 시 전체 덮어쓰기 지원)`;
+        let textKo = versesKo[v] || "";
+        let textEn = versesEn[v] || "";
+
+        // HTML Entity 디코딩
+        textKo = decodeHtmlEntities(textKo.trim());
+        textEn = decodeHtmlEntities(textEn.trim());
+
+        if (!textKo) {
+          if (sampleTextsKo[key]) {
+            textKo = sampleTextsKo[key];
+          } else {
+            textKo = `${koBookName} ${chapterNum}장 ${verseNum}절 말씀입니다.`;
+          }
         }
 
-        if (sampleTextsEn[key]) {
-          bookTextEn[key] = sampleTextsEn[key];
-        } else {
-          bookTextEn[key] = `${enBookName} ${chapterNum}:${verseNum} verse text placeholder. (Configurable replaceable text provider)`;
+        if (!textEn) {
+          if (sampleTextsEn[key]) {
+            textEn = sampleTextsEn[key];
+          } else {
+            textEn = `${enBookName} ${chapterNum}:${verseNum} verse.`;
+          }
         }
+
+        bookTextKo[key] = textKo;
+        bookTextEn[key] = textEn;
 
         totalGeneratedVerses++;
       }

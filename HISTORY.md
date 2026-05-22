@@ -1,5 +1,19 @@
 # HISTORY.md
 
+## 2026-05-22 (v0.7.0 - 66권 한/영 성경 전서 텍스트 100% 전체 이식 및 파이프라인 완수)
+
+- 작업: 오픈소스 무저작권 성경 전서 데이터셋(`ko_ko.json` 및 `en_kjv.json`)을 direct fetch 및 탑재하여, 66권 전체 31,106구절 한/영 텍스트를 누락 없이 1:1 정밀 매핑하는 빌드 파이프라인(`scripts/prepare-data.js`) 개편 가동 성공. 한글 개역한글 데이터셋의 UTF-8 BOM(\uFEFF) 제거 및 홑따옴표가 깨지는 HTML Entities(`&#x27;` ➔ `'` 등)를 미려하게 복원해 주는 특수 문자 정제 디코딩 이식 완료.
+- 변경 파일:
+  - `scripts/prepare-data.js`: UTF-8 BOM 제거 로직(`replace(/^\uFEFF/, '')`) 및 한글 깨짐 복원을 위한 `decodeHtmlEntities` 헬퍼 함수 구현 적용, `ko_ko.json` 및 `en_kjv.json` 전체 성경 구절 순회 구조로 개편하여 플레이스홀더를 지우고 실제 구절 데이터로 66권 분할 적재(`public/data/bible-text/`)하도록 전처리 로직 전면 보강
+  - `TASKS.md`, `CHANGELOG.md`, `HISTORY.md`, `DECISIONS.md`: v0.7.0 전체 텍스트 이식과 정적 빌드 검증 성공 이력 마일스톤 전면 갱신
+- 검증:
+  - 로컬 `cmd.exe /c "npm run lint"`: warnings 4건(React hooks dependency) 외 무오류 100% 통과
+  - 로컬 `cmd.exe /c "npm run build"`: dist/ 정적 SPA 번들 초고속(1.80s) 100% 무결성 통과 및 릴리즈 성공
+- 결과: 성공 (성경 66권 전서 텍스트 100% 한/영 동시 lazy loading 완벽 구현)
+- 후속 작업:
+  - WebGL 또는 OffscreenCanvas 기반 수만 개 선 렌더링 실험
+  - 검색창 자동완성(Autocomplete) 지원 및 모바일 UI 터치 슬라이딩 최적화
+
 ## 2026-05-22 (v0.6.0 - 3대 프리미엄 편의 기능 대통합)
 
 - 작업: 특정 구절 중심 집중 탐색 및 Dimming 모드 구현(책/장/절 3단 Dropdown UI 지원 및 비매칭 곡선 0.015 알파 투명도 dimming & 에메랄드 네온 하이라이팅), Weight(연관 강도) 정밀 슬라이더(0.1 ~ 1.0) 조율기 탑재로 캔버스 복잡도 및 렌더링 밀도 제어, URL Hash 기반 딥링크 공유 및 비동기 복원 시스템 수립(핀 고정 시 `#GEN.1.1-JHN.1.1` 해시 갱신 및 최초 진입 시 비동기 lazy load 후 자동 복원)

@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temp/Build Raw Data
+scripts/ko_ko.json
+scripts/en_kjv.json
