@@ -1,5 +1,19 @@
 # CHANGELOG.md
 
+## Unreleased - 2026-05-22
+
+### Fixed
+- `NetworkCanvas`의 책별 세부 교차 참조 lazy loading 로직에서 남아 있던 React Hooks 의존성 경고를 제거했습니다.
+- 중복 fetch 방지 상태를 `ref` 기반으로 정리해 렌더링과 무관한 로딩 추적이 불필요한 재렌더를 만들지 않도록 보강했습니다.
+
+### Verification
+- `npm run lint`: 경고/오류 없이 통과
+- `npm run typecheck`: 무오류 통과
+- `npm run test`: 1개 테스트 파일, 4개 테스트 통과
+- `npm run build`: dist 정적 SPA 빌드 성공
+
+---
+
 ## v0.8.0 - 2026-05-22
 
 ### Added

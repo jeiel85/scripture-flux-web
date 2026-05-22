@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { scaleLinear } from 'd3-scale';
 import books from '../data/books.json';
 import verseIndex from '../data/verse-index.json';
@@ -64,8 +64,9 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   // LOD(Level of Detail) 2단계 레이지 로딩 상태
   const [initialLinks, setInitialLinks] = useState<number[][]>([]);
   const [detailedLinks, setDetailedLinks] = useState<number[][]>([]);
-  const [loadedBooks, setLoadedBooks] = useState<Set<number>>(new Set());
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const loadedBooksRef = useRef<Set<number>>(new Set());
+  const loadingBooksRef = useRef<Set<number>>(new Set());
 
   // 최초 1회: 글로벌 대표 교차 참조 데이터 페치 (LOD Level 1)
   useEffect(() => {
@@ -83,9 +84,12 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   }, []);
 
   // 책별 세부 교차 참조 비동기 패치 함수 (LOD Level 2)
-  const loadBookDetails = async (bookIdx: number) => {
-    if (loadedBooks.has(bookIdx)) return;
+  const loadBookDetails = useCallback(async (bookIdx: number) => {
+    if (loadedBooksRef.current.has(bookIdx) || loadingBooksRef.current.has(bookIdx)) return;
+
+    loadingBooksRef.current.add(bookIdx);
     setIsLoadingDetails(true);
+
     try {
       const response = await fetch(`./data/cross-references/${bookIdx}.json`);
       if (!response.ok) throw new Error(`Failed to load cross-references for book ${bookIdx}`);
@@ -104,17 +108,14 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         });
         return merged;
       });
-      setLoadedBooks((prev) => {
-        const next = new Set(prev);
-        next.add(bookIdx);
-        return next;
-      });
+      loadedBooksRef.current.add(bookIdx);
     } catch (err) {
       console.error(`Failed to load cross-references for book ${bookIdx}:`, err);
     } finally {
-      setIsLoadingDetails(false);
+      loadingBooksRef.current.delete(bookIdx);
+      setIsLoadingDetails(loadingBooksRef.current.size > 0);
     }
-  };
+  }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   // activeLink, pinnedLink, searchVerse 활성화 시 관련 구절의 세부 교차 참조도 백그라운드 선패치 수행
@@ -130,7 +131,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     if (searchVerse) {
       loadBookDetails(searchVerse.bookIndex);
     }
-  }, [activeLink, pinnedLink, searchVerse]);
+  }, [activeLink, loadBookDetails, pinnedLink, searchVerse]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
 
@@ -215,7 +216,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         testamentClass,
       };
     });
-  }, [dimensions.height, xScale]);
+  }, [combinedReferences, dimensions.height, xScale]);
 
   // 4. 필터링된 링크만 추출 (Weight 필터 및 testamentClass 필터 적용)
   const filteredLinks = useMemo(() => {
@@ -288,7 +289,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       setActiveLink(foundLink);
       setInitialPinnedRefs(null); // 복원 성공했으므로 초기화
     }
-  }, [initialPinnedRefs, allLinks]);
+  }, [allLinks, initialPinnedRefs, loadBookDetails, setActiveLink, setInitialPinnedRefs, setPinnedLink]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // 5. Canvas 고해상도 렌더링 & 애니메이션 루프
@@ -553,7 +554,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     };
 
     draw();
-  }, [dimensions, filteredLinks, activeLink, pinnedLink, xScale]);
+  }, [activeLink, dimensions, filteredLinks, loadBookDetails, pinnedLink, searchVerse, xScale]);
 
   // 6. 120ms 호버 디바운스 기반 pointermove 좌표 감지 연산 (인터랙션 요동 떨림 방지)
   const updateActiveLinkAtCoordinates = (x: number, y: number) => {

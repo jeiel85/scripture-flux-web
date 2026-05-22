@@ -105,10 +105,16 @@
 - [x] React cascading render 방지를 위해 useEffect 대신 렌더 시점 Prop 비교/상태 조정 패턴 적용 및 린트 오류 해결
 - [x] `npm run lint` 및 `npm run build` 정적 dist 번들링 무결성 통과 확인
 
+## v0.8.0 유지보수 - Canvas Hooks 의존성 경고 정리 (완료)
+
+- [x] `NetworkCanvas` 책별 세부 교차 참조 lazy loading 함수를 `useCallback`으로 안정화
+- [x] 중복 fetch 방지 상태를 `ref` 기반으로 분리해 불필요한 렌더 상태 의존성 제거
+- [x] `useEffect`/`useMemo` 의존성 배열을 실제 데이터 흐름과 일치하도록 보정
+- [x] `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` 통과 확인
+
 ## 후속 아이디어
 
 - [ ] 성경 본문 번역 선택 구조 확장 (예: 쉬운성경, NIV 등)
 - [ ] WebGL 또는 OffscreenCanvas 기반 수만 개 선 렌더링 실험
 - [ ] 모바일 UI 터치 슬라이딩 및 스와이프 제스처 최적화
-
 

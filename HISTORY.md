@@ -1,5 +1,21 @@
 # HISTORY.md
 
+## 2026-05-22 (v0.8.0 유지보수 - Canvas Hooks 의존성 경고 정리)
+
+- 작업: `NetworkCanvas`의 책별 세부 교차 참조 lazy loading 함수를 안정적인 `useCallback` 구조로 정리하고, 로드 완료/진행 중 책 목록을 `ref`로 관리하여 React Hooks 의존성 경고를 제거.
+- 변경 파일:
+  - `src/components/NetworkCanvas.tsx`: `loadBookDetails`를 안정화하고 중복 fetch 방지 상태를 `loadedBooksRef`/`loadingBooksRef`로 분리, `useMemo` 및 `useEffect` 의존성 배열을 실제 데이터 흐름과 일치하도록 보정
+  - `TASKS.md`, `CHANGELOG.md`, `HISTORY.md`: 유지보수 작업 이력과 검증 결과 기록
+- 검증:
+  - 로컬 `npm run lint`: 경고/오류 없이 통과
+  - 로컬 `npm run typecheck`: 무오류 통과
+  - 로컬 `npm run test`: 1개 테스트 파일, 4개 테스트 통과
+  - 로컬 `npm run build`: dist 정적 SPA 빌드 성공
+- 결과: 성공 (기존 Canvas lazy loading 동작을 유지하면서 린트 경고 4건 제거)
+- 후속 작업:
+  - WebGL 또는 OffscreenCanvas 기반 수만 개 선 렌더링 실험
+  - 모바일 UI 터치 슬라이딩 및 스와이프 제스처 최적화
+
 ## 2026-05-22 (v0.8.0 - 지능형 자동완성 검색 바 및 양방향 동기화 구현)
 
 - 작업: 초성, 약칭, 지능형 퀵 구절 파서를 지원하는 지능형 자동완성 검색 바를 구현하고, 기존 하이브리드 3단 드롭다운 셀렉터와 실시간 양방향 동기화(Sync)를 수립하여 성경 네트워크 탐색의 사용성을 극대화. 렌더링 성능을 위해 동기식 cascading render를 금지하는 ESLint 린트 규칙에 의거, useEffect 대신 렌더 시점 상태 조정 패턴을 적용하여 최적화 완수.
