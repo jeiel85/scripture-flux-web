@@ -46,6 +46,9 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   const mouseRef = useRef<{ x: number; y: number } | null>(null);
   const rAFRef = useRef<number | null>(null);
 
+  // 0. 접근성 및 키보드 상태 선언
+  const [isFocused, setIsFocused] = useState(false);
+
   // 1. 창 크기 변화 대응 (Responsive Layout)
   useEffect(() => {
     if (!containerRef.current) return;
@@ -54,8 +57,8 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setDimensions({
-          width: Math.max(600, width),
-          height: Math.max(400, height),
+          width: Math.max(320, width),
+          height: width < 600 ? 400 : Math.max(400, height),
         });
       }
     });
@@ -129,6 +132,17 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     });
   }, [allLinks, filterType]);
 
+  // 4-1. 키보드 탐색용 정렬된 링크 리스트 (소스 구절 오프셋 순 오름차순)
+  const sortedLinks = useMemo(() => {
+    return [...filteredLinks].sort((a, b) => a.sourceOffset - b.sourceOffset);
+  }, [filteredLinks]);
+
+  // activeLink로부터 유도된 현재 포커스된 링크 인덱스
+  const focusedLinkIndex = useMemo(() => {
+    if (!activeLink) return null;
+    return sortedLinks.findIndex((link) => link.id === activeLink.id);
+  }, [activeLink, sortedLinks]);
+
   // 5. Canvas 고해상도 렌더링 & 애니메이션 루프
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -183,11 +197,14 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
 
         // 텍스트 라벨 (간격을 두고 겹치지 않게 표시하거나 크기에 맞춰 렌더링)
         const textWidth = ctx.measureText(book.ko).width;
-        if (width > textWidth + 4 || (i % 3 === 0 && width > 12)) {
+        const isMobile = dimensions.width < 768;
+        const skipLabel = isMobile ? (i % 6 === 0) : (i % 3 === 0);
+
+        if (width > textWidth + 4 || (skipLabel && width > 10)) {
           ctx.fillStyle = isBookHovered ? '#ffffff' : 'rgba(156, 163, 175, 0.7)';
-          ctx.font = '10px sans-serif';
+          ctx.font = isMobile ? '8px sans-serif' : '10px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(book.ko, startX + width / 2, axisY + 28);
+          ctx.fillText(book.ko, startX + width / 2, axisY + 26);
         }
       });
 
@@ -273,15 +290,8 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     draw();
   }, [dimensions, filteredLinks, activeLink, xScale]);
 
-  // 6. rAF 기반 pointermove 쓰로틀링 (60FPS 인터랙션 최적화)
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
+  // 6. rAF 기반 pointermove 쓰로틀 좌표 감지 연산 (60FPS 인터랙션 최적화)
+  const updateActiveLinkAtCoordinates = (x: number, y: number) => {
     mouseRef.current = { x, y };
 
     if (rAFRef.current) return;
@@ -329,6 +339,37 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     });
   };
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    updateActiveLinkAtCoordinates(x, y);
+  };
+
+  // 7. 모바일 터치 이벤트 감지 구현
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || e.touches.length === 0) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.touches[0].clientX - rect.left;
+    const y = e.touches[0].clientY - rect.top;
+
+    updateActiveLinkAtCoordinates(x, y);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // 터치 스크롤 방지하여 캔버스 내 조작에 우선권 부여
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    handleTouchMove(e);
+  };
+
   const handleMouseLeave = () => {
     mouseRef.current = null;
     if (rAFRef.current) {
@@ -338,18 +379,58 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     setActiveLink(null);
   };
 
+  // 8. 키보드 탐색(Accessibility)을 위한 KeyDown 핸들러
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (sortedLinks.length === 0) return;
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIdx = focusedLinkIndex === null ? 0 : (focusedLinkIndex + 1) % sortedLinks.length;
+      setActiveLink(sortedLinks[nextIdx]);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevIdx = focusedLinkIndex === null ? sortedLinks.length - 1 : (focusedLinkIndex - 1 + sortedLinks.length) % sortedLinks.length;
+      setActiveLink(sortedLinks[prevIdx]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setActiveLink(null);
+      if (containerRef.current) {
+        containerRef.current.blur();
+      }
+    }
+  };
+
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[500px] md:h-[600px] bg-[#070b16] rounded-2xl overflow-hidden border border-slate-800/50 shadow-2xl shadow-black/80"
+      tabIndex={0}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      onKeyDown={handleKeyDown}
+      className="relative w-full h-[400px] sm:h-[500px] md:h-[600px] bg-[#070b16] rounded-2xl overflow-hidden border border-slate-800/50 focus-within:ring-2 focus-within:ring-emerald-500/80 focus-within:border-transparent transition-all duration-300 shadow-2xl shadow-black/80 outline-none"
     >
       {/* 캔버스 요소 */}
       <canvas
         ref={canvasRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseLeave}
         className="block cursor-pointer"
       />
+
+      {/* 키보드 탐색 팁 오버레이 (Premium UI 힌트) */}
+      <div className={`absolute bottom-3 left-4 text-[10px] sm:text-xs px-2.5 py-1 rounded-md transition-all duration-300 font-medium ${
+        isFocused 
+          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+          : 'bg-slate-900/40 text-slate-400 border border-slate-800/40'
+      }`}>
+        {isFocused 
+          ? '방향키(← →) 또는 Tab으로 교차 참조를 순회할 수 있습니다.' 
+          : 'Canvas를 클릭하거나 Tab 키를 누르면 키보드로 탐색할 수 있습니다.'
+        }
+      </div>
     </div>
   );
 };

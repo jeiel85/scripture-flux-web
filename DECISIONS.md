@@ -51,3 +51,25 @@ D3는 scale, interpolation, quadtree 같은 계산 보조 도구로만 사용하
 
 - 사용자가 요구한 페이지는 정보 교환이 아니라 보여주기에 집중한 정적 웹페이지다.
 - GitHub Pages 배포와 오픈소스 공개에 적합하다.
+
+## 2026-05-22 - Canvas 기반 시각화에서의 키보드/터치 접근성 보완
+
+### 결정
+
+캔버스를 포함하는 컨테이너에 `tabIndex={0}`과 포커스 스타일을 부여하고, 키보드 방향키(`ArrowLeft/Right/Up/Down`) 및 모바일 터치 드래그(`onTouchStart`, `onTouchMove`) 이벤트를 통해 활성 교차 참조(active link)를 조작할 수 있도록 설계한다.
+
+### 이유
+
+- HTML5 Canvas는 그래픽 렌더링에 특화되어 있으나 내부 개별 선이 DOM 요소가 아니므로 브라우저의 기본 포커스 및 터치 이벤트를 받지 못한다.
+- 웹 접근성(a11y) 가이드라인을 준수하기 위해 컨테이너 포커스를 통한 키보드 운용성을 확보하고, 시각적 포커스 링 및 힌트 UI를 제공하여 사용자 경험을 premium하게 만든다.
+
+## 2026-05-22 - GitHub Actions와 GitHub Pages를 통한 지속적 빌드 및 배포
+
+### 결정
+
+GitHub Actions 기반 CI/CD 파이프라인(`.github/workflows/deploy.yml`)을 구축하여, `main` 브랜치 푸시 시 자동으로 Lint, Typecheck, Test, Build를 진행하고 성공 시 GitHub Pages로 배포하도록 연동한다.
+
+### 이유
+
+- 수동 배포로 인한 환경 차이와 배포 오류를 차단하고 빌드 성공 품질을 완벽히 담보하기 위함이다.
+- 정적 SPA 아키텍처에 가장 이상적이며 오픈소스 생태계에 유기적으로 기여하는 구조이다.

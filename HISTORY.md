@@ -1,6 +1,23 @@
 # HISTORY.md
 
-## 2026-05-22
+## 2026-05-22 (P1 & P2 고도화 개발 완료 및 CI/CD 워크플로우 탑재)
+
+- 작업: 키보드 접근성 탐색, 모바일 및 터치 기기 조작 보완, Reduced Motion OS 애니메이션 축소 대응, GitHub Actions CI/CD 파이프라인 탑재 완료
+- 변경 파일:
+  - `src/components/NetworkCanvas.tsx`: `tabIndex={0}` 키보드 탐색 및 포커스 링 스타일 바인딩, 터치 드래그 탐색(`onTouchStart`/`onTouchMove`) 적용 및 마우스/터치 좌표 감지 logic 단일화, 모바일 높이 가변 반응형 대응, 66권 축 겹침 방지 주기/폰트 보정, 힌트 오버레이 UI 추가, `focusedLinkIndex` 중복 상태 제거 및 `useMemo` 기반 실시간 인덱스 역산으로 린트 경고 제거
+  - `src/components/ReferenceCard.tsx`: `prefers-reduced-motion` 미디어 쿼리 상태 훅 추가, OS 축소 설정 시 트랜지션 즉시(0s) 제거
+  - `.github/workflows/deploy.yml`: Lint, Typecheck, Test, Build 수행 및 성공 시 GitHub Pages로 빌드본 자동 배포 연동
+  - `TASKS.md`, `DECISIONS.md`, `HISTORY.md`, `CHANGELOG.md`: 구현에 따른 태스크, 결정 및 이력 최종 문서화
+- 검증:
+  - 로컬 `npm run lint`: 100% 무오류 통과
+  - 로컬 `npm run typecheck`: 100% 무오류 통과
+  - 로컬 `npm run test`: 단위 테스트 100% 성공 통과
+  - 로컬 `npm run build`: 968ms 만에 dist/ 빌드 성공
+- 결과: 성공 (P1, P2 요구사항 전체 로컬 완수 및 CI/CD 배포 준비 완료)
+- 후속 작업:
+  - 교차 참조 데이터 필터링(구약 ↔ 신약) 및 검색 기능 고도화
+
+## 2026-05-22 (MVP 구현)
 
 - 작업: ScriptureFlux 성경 교차 참조 시각화 SPA MVP 구현 완료, 빌드 에러/린트 오류 해결 및 원격 GitHub 저장소 푸시 완료
 - 변경 파일:

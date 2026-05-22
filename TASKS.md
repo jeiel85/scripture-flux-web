@@ -35,7 +35,7 @@
 - [x] active link glow 렌더링 분리
 - [x] source/target anchor point 표시
 - [x] `ReferenceCard` 오버레이 구현
-- [ ] keyboard focus 대체 인터랙션 설계
+- [x] keyboard focus 대체 인터랙션 설계
 
 ## P1 - 데이터셋 파이프라인
 
@@ -51,8 +51,8 @@
 - [x] deep navy/charcoal 배경 시스템 정리
 - [x] 구약/신약 시각 구분
 - [x] glassmorphism card 세부 스타일 보정
-- [ ] reduced motion 대응
-- [ ] 모바일/태블릿 레이아웃 대응
+- [x] reduced motion 대응
+- [x] 모바일/태블릿 레이아웃 대응
 - [x] 범례와 데이터 출처 표시
 
 ## P2 - 품질 및 배포
@@ -61,8 +61,8 @@
 - [x] `npm run typecheck` 성공
 - [x] `npm run test` 성공
 - [x] `npm run build` 성공
-- [ ] GitHub Actions CI 추가
-- [ ] GitHub Pages deploy workflow 추가
+- [x] GitHub Actions CI 추가
+- [x] GitHub Pages deploy workflow 추가
 - [x] README 실행 방법 최신화
 - [x] CHANGELOG/HISTORY 갱신
 

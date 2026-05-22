@@ -1,5 +1,34 @@
 # CHANGELOG.md
 
+## v0.3.0 - 2026-05-22
+
+### Added
+- **웹 접근성(a11y) 키보드 탐색 개선 (P1)**:
+  - `NetworkCanvas` 컨테이너에 포커스 가능 상태 (`tabIndex={0}`) 부여 및 에메랄드 컬러의 포커스 링 (`focus-within:ring-2`) 추가
+  - 방향키(`ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`)를 통한 링크 순방향/역방향 탐색 및 `Escape` 키로 포커스 해제 구현
+  - 포커스 유무에 반응하는 미려한 하단 플로팅 단축키/탐색 가이드 팁 UI 오버레이 추가
+- **모바일 및 터치 디바이스 조작 지원 (P1)**:
+  - 모바일 터치 드래그 연동을 위해 `onTouchStart` 및 `onTouchMove` 이벤트 바인딩 및 mouse 호버 쓰로틀 연산 일원화
+  - 가로폭이 좁은 모바일 기기(<768px)에서 66권 축 텍스트 라벨 겹침 방지를 위해 라벨 노출 주기(skipLabel) 확대 및 폰트 크기 축소(8px)
+  - 화면 높이를 기기 폭에 맞춰 동적으로 가변(400px ~ 600px) 적용
+- **OS 애니메이션 축소(Reduced Motion) 완벽 대응 (P1)**:
+  - `prefers-reduced-motion` 미디어 쿼리를 감지하는 state 훅 탑재
+  - OS 차원의 애니메이션 축소가 활성화된 경우 `ReferenceCard` 오버레이 등의 Framer Motion 트랜지션 애니메이션 제거 (duration: 0s)
+- **GitHub Actions 배포 자동화 파이프라인 탑재 (P2)**:
+  - `.github/workflows/deploy.yml` CI/CD 워크플로우를 생성하여 main 브랜치 푸시 시 Lint, Typecheck, Test, Build 자동 검증
+  - 빌드 통과 시 빌드 아티팩트를 GitHub Pages 정적 사이트 호스팅 서비스로 완전 자동 배포 연동
+
+### Changed
+- `focusedLinkIndex` 중복 상태를 제거하고 React 19 / ESLint 린트 규칙(`react-hooks/set-state-in-effect`)을 위반하지 않도록 `sortedLinks`를 실시간 계산하여 index를 역산출하는 `useMemo` 기반 아키텍처로 리팩토링
+
+### Verification
+- `npm run lint` 실행: ESLint 무경고 100% 통과
+- `npm run typecheck` 실행: TypeScript 타입 안전성 무오류 통과
+- `npm run test` 실행: 전체 단위 테스트(100%) 통과
+- `npm run build` 실행: Vite 프로덕션 번들 968ms 만에 에러 없이 성공
+
+---
+
 ## v0.2.0 - 2026-05-22
 
 ### Added

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, ArrowRightLeft, Sparkles } from 'lucide-react';
 import books from '../data/books.json';
@@ -10,20 +10,57 @@ interface ReferenceCardProps {
 }
 
 export const ReferenceCard: React.FC<ReferenceCardProps> = ({ activeLink }) => {
+  // OS prefers-reduced-motion 감지 상태
+  const [shouldReduceMotion, setShouldReduceMotion] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      setShouldReduceMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
+  }, []);
+
   // 텍스트 조회용 헬퍼 키 생성
   const getVerseText = (bookIdx: number, chapter: number, verse: number) => {
     const key = `${bookIdx}.${chapter}.${verse}` as keyof typeof verseTexts;
     return verseTexts[key] || "Verse text loaded dynamically in full release.";
   };
 
+  // Reduced Motion 대응 애니메이션 설정
+  const animVariants = {
+    initial: shouldReduceMotion 
+      ? { opacity: 0 } 
+      : { opacity: 0, y: 20, scale: 0.98 },
+    animate: shouldReduceMotion 
+      ? { opacity: 1 } 
+      : { opacity: 1, y: 0, scale: 1 },
+    exit: shouldReduceMotion 
+      ? { opacity: 0 } 
+      : { opacity: 0, y: 15, scale: 0.98 }
+  };
+
+  const animTransition = shouldReduceMotion 
+    ? { duration: 0 } 
+    : { duration: 0.25, ease: 'easeOut' };
+
   return (
     <AnimatePresence>
       {activeLink && (
         <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 15, scale: 0.98 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
+          variants={animVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={animTransition}
           className="glass-panel w-full rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden"
         >
           {/* 장식적 네온 백그라운드 그라디언트 */}
