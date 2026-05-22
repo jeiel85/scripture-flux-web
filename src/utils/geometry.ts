@@ -68,5 +68,5 @@ export function distanceToBezier(
  */
 export function getBezierHeight(x0: number, x1: number): number {
   const dx = Math.abs(x1 - x0);
-  return Math.max(60, Math.min(420, dx * 0.35));
+  return Math.max(50, Math.min(280, dx * 0.28));
 }

@@ -725,7 +725,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
       onKeyDown={handleKeyDown}
-      className="relative w-full h-[400px] sm:h-[500px] md:h-[600px] bg-[#070b16] rounded-2xl overflow-hidden border border-slate-800/50 focus-within:ring-2 focus-within:ring-emerald-500/80 focus-within:border-transparent transition-all duration-300 shadow-2xl shadow-black/80 outline-none"
+      className="relative w-full h-[320px] sm:h-[400px] md:h-[460px] bg-[#070b16] rounded-2xl overflow-hidden border border-slate-800/50 focus-within:ring-2 focus-within:ring-emerald-500/80 focus-within:border-transparent transition-all duration-300 shadow-2xl shadow-black/80 outline-none"
     >
       {/* 캔버스 요소 */}
       <canvas
