@@ -30,11 +30,12 @@ interface NetworkCanvasProps {
   setActiveLink: (link: RenderLink | null) => void;
   pinnedLink: RenderLink | null;
   setPinnedLink: (link: RenderLink | null) => void;
-  filterType: 'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT';
+  filterType: 'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT' | 'SAME_BOOK' | 'SAME_CHAPTER';
   minWeight: number;
   searchVerse: VerseRef | null;
   initialPinnedRefs: { source: VerseRef; target: VerseRef } | null;
   setInitialPinnedRefs: (refs: { source: VerseRef; target: VerseRef } | null) => void;
+  onFilteredCountChange?: (count: number) => void;
 }
 
 const PADDING_X = 60;
@@ -72,6 +73,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   searchVerse,
   initialPinnedRefs,
   setInitialPinnedRefs,
+  onFilteredCountChange,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -267,7 +269,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       // 1) Weight 필터
       if (link.weight < minWeight) return false;
 
-      // 2) 신구약 타입 필터
+      // 2) 신구약 타입 및 동일 책/장 필터
       if (filterType === 'OT_ONLY') {
         return link.testamentClass === 'OT_TO_OT';
       }
@@ -277,9 +279,22 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       if (filterType === 'OT_NT') {
         return link.testamentClass === 'OT_TO_NT' || link.testamentClass === 'NT_TO_OT';
       }
+      if (filterType === 'SAME_BOOK') {
+        return link.source.bookIndex === link.target.bookIndex;
+      }
+      if (filterType === 'SAME_CHAPTER') {
+        return link.source.bookIndex === link.target.bookIndex && link.source.chapter === link.target.chapter;
+      }
       return true;
     });
   }, [allLinks, filterType, minWeight]);
+
+  // 필터링된 연결선 수 변경을 부모 컴포넌트에 통보
+  useEffect(() => {
+    if (onFilteredCountChange) {
+      onFilteredCountChange(filteredLinks.length);
+    }
+  }, [filteredLinks.length, onFilteredCountChange]);
 
   // 4-1. 키보드 탐색용 정렬된 링크 리스트 (소스 구절 오프셋 순 오름차순)
   const sortedLinks = useMemo(() => {

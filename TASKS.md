@@ -120,6 +120,16 @@
 - [x] invalid cross-reference tuple이 렌더링 전체를 중단하지 않도록 방어 필터 추가
 - [x] `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, 로컬 브라우저 대체 검증 통과 확인
 
+## v0.9.0 - 34만 개 실증 성경 교차 참조망 전체 통합 및 누락 필터 탑재 (완료)
+
+- [x] OpenBible.info의 344,799개 대규모 교차 참조 데이터셋 TSV 파일(`cross_references.txt`) 파이프라인 연동 성공
+- [x] 음수 및 0 투표수 관계선 제거, 범위 타겟 구절 단일화 앵커 치환, 가중치 정밀 정규화 등 전처리 완수
+- [x] LOD Level 1 글로벌 랜드마크 1,500선 및 Level 2 66권 개별 적재 파이프라인 가동 및 100% 실증 데이터 적재 완수
+- [x] `SAME_BOOK` 및 `SAME_CHAPTER` 필터링 공식 및 Canvas 2D 연동 완비
+- [x] dynamic filteredCount callback 수립 및 통계 정보 오버레이 대시보드 연동 고도화
+- [x] GitHub Pages 빌드 에셋 404 차단 결함 완치
+- [x] `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` 100% 무오류 빌드 통과 검증 완료
+
 ## 후속 아이디어
 
 - [ ] 성경 본문 번역 선택 구조 확장 (예: 쉬운성경, NIV 등)

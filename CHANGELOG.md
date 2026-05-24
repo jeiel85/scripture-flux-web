@@ -1,5 +1,35 @@
 # CHANGELOG.md
 
+## v0.9.0 - 2026-05-25
+
+### Added
+- **34만 개 실증 성경 교차 참조망 전체 통합 (Data & LOD Complete)**:
+  - OpenBible.info의 344,799개 방대한 실증 성경 교차 참조 TSV 데이터셋(`cross_references.txt`)을 파이프라인에 통합 완수.
+  - 무효 또는 음수 투표수(Votes <= 0)를 걸러내어 341,239개의 검증된 실증 교차 참조선을 정제 적재.
+  - `1Kgs` ➔ `1Kings`, `2Kgs` ➔ `2Kings` 등 TSV 약어를 `books.json` 내의 고유 인덱스와 100% 매핑 완료.
+  - 구절 범위 형태(예: `John.1.1-John.1.3`)를 하이픈(`-`) 앞의 첫 구절(`John.1.1`)로 치환하여 단일 앵커 포인트로 정밀 계산.
+  - 투표수(`Votes`) 기반 연관 강도(`Weight`)를 `[0.1, 1.0]` 범위로 정밀 정규화 (`Math.min(1.0, 0.1 + (votes/50)*0.9)`).
+  - 1단계 로딩을 위한 최정예 상위 **1,500선** 글로벌 랜드마크 교차 참조(/data/cross-references.json) 및 66권 책별 전체 60만쌍의 2단계 세부 교차 참조 JSON 파일 적재 완료.
+- **누락된 Same-Book & Same-Chapter 필터 기능 완비 (Nice-to-have Completion)**:
+  - 성경 MVP 기획에 설계되어 있던 **같은 책 내 연결선 필터(Same-Book)** 및 **같은 장 내 연결선 필터(Same-Chapter)** 신규 필터링 옵션 전면 추가.
+  - `NetworkCanvas` 및 `App.tsx` 제어판 대시보드와 UI 글래스모프 필터 버튼 완벽 연동.
+- **동적 필터 통계 대시보드 고도화 (Premium UI/UX)**:
+  - 미니 통계 패널에 현재 활성화된 필터 명칭 및 필터링 후 캔버스 상에 실제 그려지는 연결선 수(현재 필터 매칭)를 실시간으로 노출하는 동적 통계 대시보드 구축.
+
+### Fixed
+- **GitHub Pages 페이지 로드 결함 완전 해결 (Bug Fix)**:
+  - `vite.config.ts` 및 `index.html`에서 서브디렉토리 base 경로를 실제 호스팅 저장소명인 `/scripture-flux-web/`로 통일함으로써 페이지 에셋 404 로딩 오류 전면 차단 및 완치.
+  - `index.html` 메타태그와 `App.tsx` 내의 저장소 도메인 링크를 `scripture-flux-web`로 정밀 동기화.
+  - `.gitignore` 파일을 개편하여 8MB 상당의 원본 다운로드 zip 및 TSV 캐시 폴더를 추적 목록에서 배제.
+
+### Verification
+- `npm run lint`: unused rawCrossReferences import 제거 후 100% 무오류 통과.
+- `npm run typecheck`: 무오류 통과.
+- `npm run test`: 창세기 투영 4개 유닛 테스트 100% 성공.
+- `npm run build`: 1.04s 만에 dist 정적 SPA 번들 초고속 무오류 빌드 통과.
+
+---
+
 ## Unreleased - 2026-05-22
 
 ### Performance

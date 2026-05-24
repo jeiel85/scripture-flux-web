@@ -298,64 +298,138 @@ function buildPipeline() {
   }
   console.log(`[Success] Split Bible Text: 66 Korean files, 66 English files successfully created. (Total verses: ${totalGeneratedVerses})`);
 
-  // 2. 책별 교차 참조 데이터 분할 생성 (34만개급 LOD 시뮬레이션용 데이터셋 구축)
-  // - 각 책당 150 ~ 300개의 유기적인 합성 교차 참조 데이터 페어를 자동 생성하여 대용량 로드 성능 보증.
-  // - weight는 무작위 0.1 ~ 1.0
+  // 2. 책별 교차 참조 데이터 분할 생성 (실제 34만개급 OpenBible.info TSV 파싱 및 2단계 LOD 레이지 로딩 구축)
+  const tsvBookToId = {
+    "Gen": "GEN", "Exod": "EXO", "Lev": "LEV", "Num": "NUM", "Deut": "DEU",
+    "Josh": "JOS", "Judg": "JDG", "Ruth": "RUT", "1Sam": "1SA", "2Sam": "2SA",
+    "1Kgs": "1KI", "2Kgs": "2KI", "1Chr": "1CH", "2Chr": "2CH", "Ezra": "EZR",
+    "Neh": "NEH", "Esth": "EST", "Job": "JOB", "Ps": "PSA", "Prov": "PRO",
+    "Eccl": "ECC", "Song": "SNG", "Isa": "ISA", "Jer": "JER", "Lam": "LAM",
+    "Ezek": "EZK", "Dan": "DAN", "Hos": "HOS", "Joel": "JOL", "Amos": "AMO",
+    "Obad": "OBA", "Jonah": "JON", "Mic": "MIC", "Nah": "NAM", "Hab": "HAB",
+    "Zeph": "ZEP", "Hag": "HAG", "Zec": "ZEC", "Zech": "ZEC", "Mal": "MAL",
+    "Matt": "MAT", "Mark": "MRK", "Luke": "LUK", "John": "JHN", "Acts": "ACT",
+    "Rom": "ROM", "1Cor": "1CO", "2Cor": "2CO", "Gal": "GAL", "Eph": "EPH",
+    "Phil": "PHP", "Col": "COL", "1Thess": "1TH", "2Thess": "2TH", "1Tim": "1TI",
+    "2Tim": "2TI", "Titus": "TIT", "Phlm": "PHM", "Heb": "HEB", "Jas": "JAS",
+    "1Pet": "1PE", "2Pet": "2PE", "1John": "1JN", "2John": "2JN", "3John": "3JN",
+    "Jude": "JUD", "Rev": "REV"
+  };
+
+  function parseVerse(refStr) {
+    if (!refStr) return null;
+    // 범위 형태(예: John.1.1-John.1.3)는 첫 구절만 앵커로 처리
+    const baseRef = refStr.split('-')[0];
+    const parts = baseRef.split('.');
+    if (parts.length < 3) return null;
+    const tsvBook = parts[0];
+    const chapter = parseInt(parts[1], 10);
+    const verse = parseInt(parts[2], 10);
+    
+    const bookId = tsvBookToId[tsvBook];
+    if (!bookId) return null;
+    const bookIdx = booksOrder.indexOf(bookId);
+    if (bookIdx === -1) return null;
+    
+    return { bookIdx, chapter, verse };
+  }
+
+  const tsvPath = path.resolve('scripts/cross-references-raw/cross_references.txt');
+  if (!fs.existsSync(tsvPath)) {
+    console.error('Error: scripts/cross-references-raw/cross_references.txt not found!');
+    process.exit(1);
+  }
+
+  console.log('Loading and parsing raw TSV cross-references...');
+  const tsvContent = fs.readFileSync(tsvPath, 'utf-8');
+  const tsvLines = tsvContent.split('\n');
+  const allParsedRefs = [];
+
+  for (let i = 1; i < tsvLines.length; i++) {
+    const line = tsvLines[i].trim();
+    if (!line) continue;
+    const parts = line.split('\t');
+    if (parts.length < 3) continue;
+
+    const votes = parseInt(parts[2], 10);
+    if (isNaN(votes) || votes <= 0) continue; // 부적합 및 음수/0 투표수 필터링 배제
+
+    const fromVerse = parseVerse(parts[0]);
+    const toVerse = parseVerse(parts[1]);
+    if (!fromVerse || !toVerse) continue;
+
+    // 자기 참조 회피
+    if (fromVerse.bookIdx === toVerse.bookIdx &&
+        fromVerse.chapter === toVerse.chapter &&
+        fromVerse.verse === toVerse.verse) {
+      continue;
+    }
+
+    // 투표수 기반 연관 강도(Weight) 0.1~1.0 매핑 (50표 이상 시 1.0)
+    const weight = parseFloat(Math.min(1.0, 0.1 + (votes / 50) * 0.9).toFixed(2));
+
+    allParsedRefs.push({
+      srcBook: fromVerse.bookIdx,
+      srcCh: fromVerse.chapter,
+      srcVs: fromVerse.verse,
+      tgtBook: toVerse.bookIdx,
+      tgtCh: toVerse.chapter,
+      tgtVs: toVerse.verse,
+      votes,
+      weight
+    });
+  }
+
+  console.log(`Successfully parsed ${allParsedRefs.length} valid positive cross-references.`);
+
   let totalCrossRefPairs = 0;
   const crossRefDistribution = {};
 
+  // 66권 책별로 분할 적재
   for (let b = 0; b < booksOrder.length; b++) {
     const bookRefList = [];
-    const sourceChapters = chapterVerseCountsData[booksOrder[b]];
-
-    // 1) 전역 대표 참조 중에서 이 책이 속한 것 수록
-    globalRepresentativeReferences.forEach(ref => {
-      if (ref[0] === b || ref[3] === b) {
-        bookRefList.push(ref);
+    allParsedRefs.forEach(ref => {
+      if (ref.srcBook === b || ref.tgtBook === b) {
+        bookRefList.push([
+          ref.srcBook, ref.srcCh, ref.srcVs,
+          ref.tgtBook, ref.tgtCh, ref.tgtVs,
+          ref.weight
+        ]);
       }
     });
 
-    // 2) 34만개 대규모 연산 처리를 실증적으로 테스트하기 위한 유기적 대량 데이터 페어 생성
-    //    각 책마다 200여개의 가상 참조선을 장/절 바운더리에 맞게 자동 전처리 빌드
-    const syntheticTargetCount = 180; 
-    for (let s = 0; s < syntheticTargetCount; s++) {
-      const srcCh = Math.floor(Math.random() * sourceChapters.length) + 1;
-      const srcVs = Math.floor(Math.random() * sourceChapters[srcCh - 1]) + 1;
-
-      // 무작위 타겟 책 선택
-      const tgtBookIdx = Math.floor(Math.random() * booksOrder.length);
-      const targetChapters = chapterVerseCountsData[booksOrder[tgtBookIdx]];
-      const tgtCh = Math.floor(Math.random() * targetChapters.length) + 1;
-      const tgtVs = Math.floor(Math.random() * targetChapters[tgtCh - 1]) + 1;
-
-      const weight = parseFloat((Math.random() * 0.9 + 0.1).toFixed(2));
-
-      // 자기 참조 회피
-      if (b === tgtBookIdx && srcCh === tgtCh && srcVs === tgtVs) continue;
-
-      bookRefList.push([b, srcCh, srcVs, tgtBookIdx, tgtCh, tgtVs, weight]);
-    }
-
-    fs.writeFileSync(path.join(crossReferencesDir, `${b}.json`), JSON.stringify(bookRefList, null, 2), 'utf-8');
+    fs.writeFileSync(
+      path.join(crossReferencesDir, `${b}.json`), 
+      JSON.stringify(bookRefList), 
+      'utf-8'
+    );
     crossRefDistribution[b] = bookRefList.length;
     totalCrossRefPairs += bookRefList.length;
   }
 
-  // 3. 글로벌 랜드마크 대표 데이터 (최초 캔버스 로딩 시 띄워줄 가벼운 전체 뷰 랜드마크 선들)
+  // 3. 글로벌 대표 랜드마크 데이터 (최초 로딩 시 보여줄 최정예 상위 1,500선 추출)
+  const sortedRefs = [...allParsedRefs].sort((a, b) => b.votes - a.votes);
+  const globalRepRefs = sortedRefs.slice(0, 1500).map(ref => [
+    ref.srcBook, ref.srcCh, ref.srcVs,
+    ref.tgtBook, ref.tgtCh, ref.tgtVs,
+    ref.weight
+  ]);
+
   fs.writeFileSync(
     path.join(publicDataDir, 'cross-references.json'), 
-    JSON.stringify(globalRepresentativeReferences, null, 2), 
+    JSON.stringify(globalRepRefs), 
     'utf-8'
   );
+
   console.log(`[Success] Split Cross-References: 66 book-level JSON files successfully generated.`);
-  console.log(`[Stats] Total simulated cross-reference links: ${totalCrossRefPairs} pairs (LOD active)`);
+  console.log(`[Stats] Total simulated/loaded cross-reference links: ${totalCrossRefPairs} pairs (LOD active)`);
 
   // 4. 빌드 보고서 내보내기
   const dataReport = {
-    version: "v0.4.0-dataset-lod",
+    version: "v0.8.0-dataset-lod-complete",
     totalVerses: totalGeneratedVerses,
-    totalCrossReferences: totalCrossRefPairs,
-    representativePairs: globalRepresentativeReferences.length,
+    totalCrossReferences: allParsedRefs.length,
+    representativePairs: globalRepRefs.length,
     crossRefDistribution,
     timestamp: new Date().toISOString(),
     attribution: {

@@ -26,3 +26,5 @@ dist-ssr
 # Temp/Build Raw Data
 scripts/ko_ko.json
 scripts/en_kjv.json
+scripts/cross-references.zip
+scripts/cross-references-raw/

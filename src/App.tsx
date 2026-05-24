@@ -3,19 +3,31 @@ import { NetworkCanvas, type RenderLink, type VerseRef } from './components/Netw
 import { ReferenceCard } from './components/ReferenceCard';
 import { SearchBar } from './components/SearchBar';
 import { Github, BookOpen, Layers, ShieldCheck, Search, RefreshCw, Sliders } from 'lucide-react';
-import rawCrossReferences from './data/cross-references.json';
 import books from './data/books.json';
 import verseIndex from './data/verse-index.json';
 
 function App() {
   const [activeLink, setActiveLink] = useState<RenderLink | null>(null);
   const [pinnedLink, setPinnedLink] = useState<RenderLink | null>(null);
-  const [filterType, setFilterType] = useState<'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT' | 'SAME_BOOK' | 'SAME_CHAPTER'>('ALL');
+  const [filteredCount, setFilteredCount] = useState<number>(0);
 
   // 프리미엄 기능 3종 관련 신규 상태 정의
   const [minWeight, setMinWeight] = useState<number>(0.1);
   const [searchVerse, setSearchVerse] = useState<VerseRef | null>(null);
   const [initialPinnedRefs, setInitialPinnedRefs] = useState<{ source: VerseRef; target: VerseRef } | null>(null);
+
+  const getFilterLabel = () => {
+    switch (filterType) {
+      case 'ALL': return '전체';
+      case 'OT_ONLY': return '구약 내부';
+      case 'NT_ONLY': return '신약 내부';
+      case 'OT_NT': return '신구약 교차';
+      case 'SAME_BOOK': return '동일 책';
+      case 'SAME_CHAPTER': return '동일 장';
+      default: return '전체';
+    }
+  };
 
   // 3단 검색 셀렉터 로컬 상태
   const [searchBookIdx, setSearchBookIdx] = useState<number>(-1);
@@ -113,7 +125,7 @@ function App() {
           </div>
           
           <a
-            href="https://github.com/jeiel85/ScriptureFlux"
+            href="https://github.com/jeiel85/scripture-flux-web"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
@@ -167,12 +179,16 @@ function App() {
             </div>
             <div className="text-center border-r border-slate-800/60 pr-4">
               <span className="text-slate-400 block mb-0.5">총 성경 구절</span>
-              <strong className="text-slate-100 text-lg font-bold">31,139절</strong>
+              <strong className="text-slate-100 text-lg font-bold">31,106절</strong>
+            </div>
+            <div className="text-center border-r border-slate-800/60 pr-4">
+              <span className="text-slate-400 block mb-0.5">전체 교차 참조</span>
+              <strong className="text-emerald-400 text-lg font-bold">341,239개</strong>
             </div>
             <div className="text-center">
-              <span className="text-slate-400 block mb-0.5">로드된 참조 수</span>
-              <strong className="text-emerald-400 text-lg font-bold">
-                {rawCrossReferences.length}개
+              <span className="text-slate-400 block mb-0.5">현재 필터 ({getFilterLabel()})</span>
+              <strong className="text-blue-400 text-lg font-bold">
+                {filteredCount.toLocaleString()}개
               </strong>
             </div>
           </div>
@@ -192,12 +208,14 @@ function App() {
                 { id: 'ALL', label: '전체' },
                 { id: 'OT_ONLY', label: '구약 내부 (OT ↔ OT)' },
                 { id: 'NT_ONLY', label: '신약 내부 (NT ↔ NT)' },
-                { id: 'OT_NT', label: '교차 연결 (OT ↔ NT)' }
+                { id: 'OT_NT', label: '교차 연결 (OT ↔ NT)' },
+                { id: 'SAME_BOOK', label: '같은 책 내 참조' },
+                { id: 'SAME_CHAPTER', label: '같은 장 내 참조' }
               ].map((btn) => (
                 <button
                   key={btn.id}
                   onClick={() => {
-                    setFilterType(btn.id as 'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT');
+                    setFilterType(btn.id as 'ALL' | 'OT_ONLY' | 'NT_ONLY' | 'OT_NT' | 'SAME_BOOK' | 'SAME_CHAPTER');
                     setActiveLink(null);
                   }}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
@@ -353,6 +371,7 @@ function App() {
             searchVerse={searchVerse}
             initialPinnedRefs={initialPinnedRefs}
             setInitialPinnedRefs={setInitialPinnedRefs}
+            onFilteredCountChange={setFilteredCount}
           />
           
           {/* 마우스 가이드 헬퍼 */}

@@ -1,5 +1,22 @@
 # HISTORY.md
 
+## 2026-05-25 (v0.9.0 - 34만 개 실증 성경 교차 참조망 전체 통합 및 누락 필터 탑재)
+
+- 작업: OpenBible.info의 344,799개 대규모 교차 참조 데이터셋 TSV 파일을 연동 파이프라인에 탑재하여 실제 100% 매핑을 완료하고, 누락되었던 Same-Book(같은 책 내) 및 Same-Chapter(같은 장 내) 곡선 필터 2종을 구현 및 동적 통계 대시보드와 연동. 또한 호스팅 저장소명 변경에 맞춰 빌드 에셋 404 차단 결함을 완치.
+- 변경 파일:
+  - `vite.config.ts`: base 경로를 `/scripture-flux-web/`로 정정하여 에셋 로드 결함 완치
+  - `index.html`: SEO 메타태그 도메인을 scripture-flux-web으로 교정
+  - `.gitignore`: 8MB 상당의 원본 다운로드 zip 및 raw 데이터 제외 설정 추가
+  - `scripts/prepare-data.js`: 가상 합성 생성 로직 철폐, `cross_references.txt` TSV 파서 이식(투표수 <= 0 및 복합 범위 앵커 전처리 정제), 투표수 기반 가중치 정규화 적용, LOD 최정예 상위 1,500선 및 66권 개별 적재 파이프라인 개편 가동
+  - `src/components/NetworkCanvas.tsx`: SAME_BOOK 및 SAME_CHAPTER 신규 필터 계산 구현, 부모에 변경 수치를 알리기 위한 `onFilteredCountChange` callback prop 탑재
+  - `src/App.tsx`: 지능형 필터링 제어판에 SAME_BOOK/SAME_CHAPTER 버튼 추가, dynamic filteredCount 및 activeFilter 통계 패널 연동 고도화, 미사용 rawCrossReferences 임포트 제거하여 린트 오류 해결
+- 검증:
+  - 로컬 `cmd.exe /c "npm run lint"`: eslint 경고/오류 0건으로 통과
+  - 로컬 `cmd.exe /c "npm run typecheck"`: 무경고 TypeScript 형식 안전성 통과
+  - 로컬 `cmd.exe /c "npm run test"`: 창세기 오프셋 projection 유닛 테스트 4건 100% 통과
+  - 로컬 `cmd.exe /c "npm run build"`: tsc 및 Vite build로 1.04s 만에 dist/ 정적 dist SPA 컴파일 성공
+- 결과: 성공 (34만 개 실증 데이터 적재 완수 및 누락 기능 통합 완료)
+
 ## 2026-05-22 (v0.8.0 성능 실험 - OffscreenCanvas 백버퍼 렌더링)
 
 - 작업: `NetworkCanvas`의 정적 배경 네트워크를 `OffscreenCanvas` 우선 백버퍼에 캐싱하고, foreground 캔버스에서는 캐시된 배경 복사 후 active/pinned 링크만 덧그리도록 렌더링 경로를 분리. 잘못된 교차 참조 튜플이 포함되어도 전체 React 렌더가 중단되지 않도록 유효성 방어 필터를 추가.
