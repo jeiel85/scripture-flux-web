@@ -118,92 +118,8 @@ const booksEnNames = [
   "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"
 ];
 
-// 30개 고유 샘플 구절 보존 매핑 (KJV & 개역한글)
-const sampleTextsEn = {
-  "0.1.1": "In the beginning God created the heaven and the earth.",
-  "42.1.1": "In the beginning was the Word, and the Word was with God, and the Word was God.",
-  "0.1.2": "And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
-  "18.33.6": "By the word of the LORD were the heavens made; and all the host of them by the breath of his mouth.",
-  "18.104.30": "Thou sendest forth thy spirit, they are created: and thou renewest the face of the earth.",
-  "0.1.3": "And God said, Let there be light: and there was light.",
-  "53.4.6": "For God, who commanded the light to shine out of darkness, hath shined in our hearts, to give the light of the knowledge of the glory of God in the face of Jesus Christ.",
-  "0.1.26": "And God said, Let us make man in our image, after our likeness: and let them have dominion over the fish of the sea, and over the fowl of the air, and over the cattle, and over all the earth, and over every creeping thing that creepeth upon the earth.",
-  "51.5.12": "Wherefore, as by one man sin entered into the world, and death by sin; and so death passed upon all men, for that all have sinned:",
-  "0.1.27": "So God created man in his own image, in the image of God created he him; male and female created he them.",
-  "0.2.7": "And the LORD God formed man of the dust of the ground, and breathed into his nostrils the breath of life; and man became a living soul.",
-  "52.15.45": "And so it is written, The first man Adam was made a living soul; the last Adam was made a quickening spirit.",
-  "0.2.24": "Therefore shall a man leave his father and his mother, and shall cleave unto his wife: and they shall be one flesh.",
-  "47.10.7": "For this cause shall a man leave his father and mother, and cleave to his wife;",
-  "52.6.16": "What? know ye not that he which is joined to an harlot is one body? for two, saith he, shall be one flesh.",
-  "55.5.31": "For this cause shall a man leave his father and mother, and shall be joined unto his wife, and they two shall be one flesh.",
-  "0.3.4": "And the serpent said unto the woman, Ye shall not surely die:",
-  "53.11.3": "But I fear, lest by any means, as the serpent beguiled Eve through his subtilty, so your minds should be corrupted from the simplicity that is in Christ.",
-  "0.3.6": "And when the woman saw that the tree was good for food, and that it was pleasant to the eyes, and a tree to be desired to make one wise, she took of the fruit thereof, and did eat, and gave also unto her husband with her; and he did eat.",
-  "60.2.14": "And Adam was not deceived, but the woman being deceived was in the transgression.",
-  "0.3.15": "And I will put enmity between thee and the woman, and between thy seed and her seed; it shall bruise thy head, and thou shalt bruise his heel.",
-  "54.4.4": "But when the fulness of the time was come, God sent forth his Son, made of a woman, made under the law,",
-  "61.2.17": "Love not the world, neither the things that are in the world. If any man love the world, the love of the Father is not in him.",
-  "64.2": "By faith Enoch was translated that he should not see death; and was not found, because God had translated him: for before his translation he had this testimony, that he pleased God.",
-  "0.5.24": "And Enoch walked with God: and he was not; for God took him.",
-  "0.6.5": "And GOD saw that the wickedness of man was great in the earth, and that every imagination of the thoughts of his heart was only evil continually.",
-  "0.6.6": "And it repented the LORD that he had made man on the earth, and it grieved him at his heart.",
-  "0.6.14": "Make thee an ark of gopher wood; rooms shalt thou make in the ark, and shalt pitch it within and without with pitch.",
-  "64.11.7": "By faith Noah, being warned of God of things not seen as yet, moved with fear, prepared an ark to the saving of his house; by the which he condemned the world, and became heir of the righteousness which is by faith.",
-  "67.3.20": "Which sometime were disobedient, when once the longsuffering of God waited in the days of Noah, while the ark was a preparing, wherein few, that is, eight souls were saved by water."
-};
+// 대형 샘플 데이터 맵 및 수동 랜드마크 맵이 삭제되었습니다.
 
-const sampleTextsKo = {
-  "0.1.1": "태초에 하나님이 천지를 창조하시니라",
-  "42.1.1": "태초에 말씀이 계시니라 이 말씀이 하나님과 함께 계셨으니 이 말씀은 곧 하나님이시니라",
-  "0.1.2": "땅이 혼돈하고 공허하며 흑암이 깊음 위에 있고 하나님의 신은 수면에 운행하시니라",
-  "18.33.6": "여호와의 말씀으로 하늘이 지음이 되었으며 그 만상이 그 입 기운으로 이루었도다",
-  "18.104.30": "주의 영을 보내어 저희를 창조하사 지면을 새롭게 하시나이다",
-  "0.1.3": "하나님이 가라사대 빛이 있으라 하시매 빛이 있었고",
-  "53.4.6": "어두운 데서 빛이 비취리라 하시던 그 하나님께서 예수 그리스도의 얼굴에 있는 하나님의 영광을 아는 빛을 우리 마음에 비취셨느니라",
-  "0.1.26": "하나님이 가라사대 우리의 형상을 따라 우리의 모양대로 우리가 사람을 만들고 그로 바다의 고기오와 공중의 새와 육축과 온 땅과 땅에 기는 모든 것을 다스리게 하자 하시고",
-  "51.5.12": "이러므로 한 사람으로 말미암아 죄가 세상에 들어오고 죄로 말미암아 사망이 왔나니 이와 같이 모든 사람이 죄를 지었으므로 사망이 모든 사람에게 이르렀느니라",
-  "0.1.27": "하나님이 자기 형상 곧 하나님의 형상대로 사람을 창조하시되 남자와 여자를 창조하시고",
-  "0.2.7": "여호와 하나님이 흙으로 사람을 지으시고 생기를 그 코에 불어 넣으시니 사람이 생령이 되니라",
-  "52.15.45": "기록된바 첫 사람 아담은 산 영이 되었다 함과 같이 마지막 아담은 살려 주는 영이 되었나니",
-  "0.2.24": "이러므로 남자가 부모를 떠나 그 아내와 연합하여 둘이 한 몸을 이룰찌로다",
-  "47.10.7": "이러므로 사람이 그 부모를 떠나서 그 아내와 합하여",
-  "52.6.16": "창기와 합하는 자는 저와 한 몸인 줄을 알지 못하느냐 일렀으되 둘이 한 몸이 되리라 하셨나니",
-  "55.5.31": "이러므로 사람이 부모를 떠나 그 아내와 합하여 그 둘이 한 몸이 될찌니",
-  "0.3.4": "뱀이 여자에게 이르되 너희가 결코 죽지 아니하리라",
-  "53.11.3": "뱀이 그 간계로 이와를 미혹케 한것 같이 너희 마음이 그리스도를 향하는 진실함과 깨끗함에서 떠나 부패할까 두려워하노라",
-  "0.3.6": "여자가 그 나무를 본즉 먹음직도 하고 보암직도 하고 지혜롭게 할만큼 탐스럽기도 한 나무인지라 여자가 그 실과를 따먹고 자기와 함께한 남편에게도 주매 그도 먹은지라",
-  "60.2.14": "아담이 꾀임을 보지 아니하고 여자가 꾀임을 보아 죄에 빠졌음이니라",
-  "0.3.15": "내가 너로 여자와 원수가 되게 하고 너의 후손도 여자의 후손과 원수가 되게 하리니 여자의 후손은 네 머리를 상하게 할 것이요 너는 그의 발꿈치를 상하게 할 것이니라 하시고",
-  "54.4.4": "때가 차매 하나님이 그 아들을 보내사 여자에게서 나게 하시고 율법 아래 나게 하신 것은",
-  "61.2.17": "이 세상이나 세상에 있는 것들을 사랑치 말라 누구든지 세상을 사랑하면 아버지의 사랑이 그 속에 있지 아니하니",
-  "64.2": "에녹은 믿음으로 죽음을 보지 않고 옮기웠으니 하나님이 저를 옮기심으로 다시 보이지 아니하니라 저는 옮기우기 전에 하나님을 기쁘시게 하는 자라 하는 증거를 받았느니라",
-  "0.5.24": "에녹이 하나님과 동행하더니 하나님이 그를 데려가시므로 세상에 있지 아니하였더라",
-  "0.6.5": "여호와께서 사람의 죄악이 세상에 관영함과 그 마음의 생각의 모든 계획이 항상 악할 뿐임을 보시고",
-  "0.6.6": "땅위에 사람 지으셨음을 한탄하사 마음에 근심하시고",
-  "0.6.14": "너는 잣나무로 너를 위하여 방주를 짓되 그 안에 칸들을 막고 역청으로 그 안팎에 칠하라",
-  "64.11.7": "믿음으로 노아는 아직 보지 못하는 일에 경고하심을 받아 경외함으로 방주를 준비하여 그 집을 구원하였으니 이로 말미암아 세상을 정죄하고 믿음을 좇는 의의 후사가 되었느니라",
-  "67.3.20": "그들은 전에 노아의 날 방주 예비할 동안 하나님이 오래 참고 기다리실 때에 순종치 아니하던 자들이라 방주에서 물로 말미암아 구원을 얻은 자가 몇명 뿐이니 겨우 여덟 명이라"
-};
-
-// 대표적 교차 참조 (전체 뷰 LOD 렌더링용)
-const globalRepresentativeReferences = [
-  [0, 1, 1, 42, 1, 1, 1.0],  // 창 1:1 <-> 요 1:1
-  [0, 1, 2, 18, 33, 6, 0.9], // 창 1:2 <-> 시 33:6
-  [0, 1, 2, 18, 104, 30, 0.8], // 창 1:2 <-> 시 104:30
-  [0, 1, 3, 53, 4, 6, 0.95], // 창 1:3 <-> 고후 4:6
-  [0, 1, 26, 51, 5, 12, 0.85], // 창 1:26 <-> 롬 5:12
-  [0, 1, 27, 0, 2, 7, 0.75],  // 창 1:27 <-> 창 2:7
-  [0, 2, 7, 52, 15, 45, 1.0], // 창 2:7 <-> 고전 15:45
-  [0, 2, 24, 47, 10, 7, 0.9], // 창 2:24 <-> 막 10:7
-  [0, 2, 24, 52, 6, 16, 0.85], // 창 2:24 <-> 고전 6:16
-  [0, 2, 24, 55, 5, 31, 0.95], // 창 2:24 <-> 엡 5:31
-  [0, 3, 4, 53, 11, 3, 0.9],  // 창 3:4 <-> 고후 11:3
-  [0, 3, 6, 60, 2, 14, 0.85], // 창 3:6 <-> 디전 2:14
-  [0, 3, 15, 54, 4, 4, 1.0],  // 창 3:15 <-> 갈 4:4
-  [0, 5, 24, 64, 11, 5, 0.95], // 창 5:24 <-> 히 11:5
-  [0, 6, 14, 64, 11, 7, 0.9], // 창 6:14 <-> 히 11:7
-  [0, 6, 14, 67, 3, 20, 0.85]  // 창 6:14 <-> 벧전 3:20
-];
 
 function buildPipeline() {
   const publicDataDir = path.resolve('public/data');
@@ -270,19 +186,11 @@ function buildPipeline() {
         textEn = decodeHtmlEntities(textEn.trim());
 
         if (!textKo) {
-          if (sampleTextsKo[key]) {
-            textKo = sampleTextsKo[key];
-          } else {
-            textKo = `${koBookName} ${chapterNum}장 ${verseNum}절 말씀입니다.`;
-          }
+          textKo = `(본 번역본에는 없는 구절입니다)`;
         }
 
         if (!textEn) {
-          if (sampleTextsEn[key]) {
-            textEn = sampleTextsEn[key];
-          } else {
-            textEn = `${enBookName} ${chapterNum}:${verseNum} verse.`;
-          }
+          textEn = `(Verse omitted in this translation)`;
         }
 
         bookTextKo[key] = textKo;
