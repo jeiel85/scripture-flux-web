@@ -101,6 +101,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [offsetX, setOffsetX] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [tempHoveredLink, setTempHoveredLink] = useState<RenderLink | null>(null);
 
   // 드래그 및 터치/핀치 줌 추적용 refs
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -216,7 +217,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     return (x - offsetX - centerX) / zoomLevel + centerX;
   }, [dimensions.width, zoomLevel, offsetX]);
 
-  // 마우스 휠 줌 연동 (Passive Event Listener 우회)
+  // 마우스 휠 줌 연동 (Passive Event Listener 우회, 최대 줌 80.0배 확장)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -227,7 +228,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       let nextZoom = zoomLevel;
 
       if (e.deltaY < 0) {
-        nextZoom = Math.min(10.0, zoomLevel * zoomFactor);
+        nextZoom = Math.min(80.0, zoomLevel * zoomFactor);
       } else {
         nextZoom = Math.max(1.0, zoomLevel / zoomFactor);
       }
@@ -476,6 +477,79 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       }
     });
 
+    // 5-1-2. 줌 수준별 다이내믹 세부 눈금(LOD Ticks) 렌더링
+    if (zoomLevel >= 4.0) {
+      books.forEach((book, i) => {
+        const bookMeta = verseIndex.books[i];
+        
+        // 현재 화면 범위(Viewport) 계산
+        const bookStartX = applyZoom(xScale(bookMeta.startVerseOffset));
+        const bookEndX = applyZoom(xScale(bookMeta.startVerseOffset + bookMeta.verseCount));
+        
+        // 책 전체가 화면 밖에 있으면 연산 스킵
+        if (bookEndX < -50 || bookStartX > dimensions.width + 50) return;
+
+        let accumOffset = bookMeta.startVerseOffset;
+
+        bookMeta.chapterVerseCounts.forEach((verseCount, c) => {
+          const chX = applyZoom(xScale(accumOffset));
+          
+          // 1) 장(Chapter) 구분선 및 라벨 그리기
+          if (chX >= -50 && chX <= dimensions.width + 50) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(chX, axisY + 12);
+            ctx.lineTo(chX, axisY + 20);
+            ctx.stroke();
+
+            // 장 라벨 (줌 수준에 따라 노출 간격 조율)
+            const chapterInterval = zoomLevel >= 25.0 ? 1 : zoomLevel >= 12.0 ? 2 : 5;
+            const isLabelTick = (c + 1) === 1 || (c + 1) % chapterInterval === 0;
+
+            if (isLabelTick && zoomLevel < 20.0) {
+              ctx.fillStyle = 'rgba(203, 213, 225, 0.6)';
+              ctx.font = 'bold 8px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.fillText(`${c + 1}장`, chX, axisY + 30);
+            }
+          }
+
+          // 2) 극대 줌 상태(zoomLevel >= 20.0)에서의 절(Verse) 눈금 및 상세 라벨 그리기
+          if (zoomLevel >= 20.0) {
+            const step = zoomLevel >= 45.0 ? 1 : zoomLevel >= 30.0 ? 2 : 5;
+
+            for (let v = 0; v < verseCount; v++) {
+              if (v === 0) continue; // 장 눈금과 겹치므로 통과
+
+              const vsOffset = accumOffset + v;
+              const vsX = applyZoom(xScale(vsOffset));
+
+              if (vsX >= -50 && vsX <= dimensions.width + 50) {
+                // 절 미세 눈금 틱
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.25)';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(vsX, axisY + 12);
+                ctx.lineTo(vsX, axisY + 18);
+                ctx.stroke();
+
+                // 절 라벨 렌더링
+                if ((v + 1) % step === 0) {
+                  ctx.fillStyle = 'rgba(16, 185, 129, 0.8)';
+                  ctx.font = '7px monospace';
+                  ctx.textAlign = 'center';
+                  ctx.fillText(`${book.id} ${c + 1}:${v + 1}`, vsX, axisY + 28);
+                }
+              }
+            }
+          }
+
+          accumOffset += verseCount;
+        });
+      });
+    }
+
     // 5-2. 기본 백그라운드 네트워크 곡선 그리기 (faint alpha, no glow)
     ctx.shadowBlur = 0; // 최적화: glow 제거
     ctx.lineWidth = isMobile ? 0.5 : 0.75;
@@ -585,6 +659,22 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       );
     }
 
+    // 5-2. 임시 호버선(tempHoveredLink) 은은하고 투명한 녹색 가이드선 렌더링 (PC 마우스 오버 힌트)
+    if (tempHoveredLink && (!pinnedLink || pinnedLink.id !== tempHoveredLink.id)) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.45)'; // 은은하고 투명한 에메랄드 그린
+      ctx.lineWidth = 1.5;
+      drawBezierPath(ctx, tempHoveredLink, applyZoom);
+
+      // 소스 및 타겟에 작고 귀여운 앵커 점
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+      ctx.beginPath();
+      ctx.arc(applyZoom(tempHoveredLink.x0), tempHoveredLink.y0, 3.5, 0, Math.PI * 2);
+      ctx.arc(applyZoom(tempHoveredLink.x1), tempHoveredLink.y1, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // 5-3. 활성화된 단 하나의 링크(Active Link)만 강력하게 강조하여 덧그리기 (Glow 적용)
     if (activeLink && (!pinnedLink || pinnedLink.id !== activeLink.id)) {
       // 1) Glow 효과를 위한 굵은 섀도우선
@@ -662,10 +752,10 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         pinnedLink.y1 - 15
       );
     }
-  }, [activeLink, backgroundVersion, dimensions, getTargetDpr, pinnedLink, applyZoom]);
+  }, [activeLink, backgroundVersion, dimensions, getTargetDpr, pinnedLink, applyZoom, tempHoveredLink]);
 
   // 6. 120ms 호버 디바운스 기반 pointermove 좌표 감지 연산 (인터랙션 요동 떨림 방지)
-  const updateActiveLinkAtCoordinates = (x: number, y: number) => {
+  const updateActiveLinkAtCoordinates = (x: number, y: number, isTouchEvent: boolean = false) => {
     mouseRef.current = { x, y };
 
     if (debounceTimerRef.current) {
@@ -718,8 +808,17 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         }
       });
 
-      if (foundActiveLink !== activeLink) {
-        setActiveLink(foundActiveLink);
+      // 마우스 무브(isTouchEvent = false) 시에는 activeLink를 직접 세팅하지 않고,
+      // 오직 아주 은은한 tempHoveredLink 가이드 상태만 노출하여 텍스트 번쩍임 피로를 제거합니다.
+      // 터치 무브(isTouchEvent = true) 시에만 실시간으로 상세 카드를 띄워 모바일 접근성을 수호합니다.
+      if (isTouchEvent) {
+        if (foundActiveLink !== activeLink) {
+          setActiveLink(foundActiveLink);
+        }
+      } else {
+        if (foundActiveLink !== tempHoveredLink) {
+          setTempHoveredLink(foundActiveLink);
+        }
       }
     }, 120); // 120ms 디바운스 타임
   };
@@ -746,7 +845,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       const newOffset = lastOffsetXRef.current + dx;
       setOffsetX(clampOffsetX(newOffset, zoomLevel));
     } else {
-      updateActiveLinkAtCoordinates(x, y);
+      updateActiveLinkAtCoordinates(x, y, false);
     }
   };
 
@@ -769,6 +868,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       rAFRef.current = null;
     }
     setHoveredBookIndex(null);
+    setTempHoveredLink(null);
     setActiveLink(null);
   };
 
@@ -805,7 +905,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       const ratio = dist / lastTouchDistanceRef.current;
       lastTouchDistanceRef.current = dist;
 
-      const nextZoom = Math.max(1.0, Math.min(10.0, zoomLevel * ratio));
+      const nextZoom = Math.max(1.0, Math.min(80.0, zoomLevel * ratio));
       if (nextZoom !== zoomLevel) {
         setZoomLevel(nextZoom);
         setOffsetX((prev) => clampOffsetX(prev, nextZoom));
@@ -819,7 +919,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       const rect = canvas.getBoundingClientRect();
       const x = e.touches[0].clientX - rect.left;
       const y = e.touches[0].clientY - rect.top;
-      updateActiveLinkAtCoordinates(x, y);
+      updateActiveLinkAtCoordinates(x, y, true);
     }
   };
 
@@ -829,7 +929,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     lastTouchDistanceRef.current = null;
   };
 
-  // 7-1. 클릭(Click/Tap) 기반 고정(Pin) 상태 바인딩
+  // 7-1. 클릭(Click/Tap) 기반 고정(Pin) 상태 바인딩 (PC 마우스에선 오직 클릭 시에만 카드를 띄움)
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -877,9 +977,10 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
 
     if (foundLink) {
       setPinnedLink(foundLink);
-      setActiveLink(foundLink);
+      setActiveLink(foundLink); // 클릭 시 activeLink도 확실히 동시 설정하여 상세 카드 강제 노출
     } else {
       setPinnedLink(null);
+      setActiveLink(null); // 빈 영역 클릭 시 카드도 강제 초기화
     }
   };
 
@@ -927,7 +1028,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
         style={{ 
           width: '100%', 
           height: '100%',
-          cursor: isDragging ? 'grabbing' : zoomLevel > 1.0 ? 'grab' : 'pointer'
+          cursor: isDragging ? 'grabbing' : zoomLevel > 1.0 ? 'grab' : tempHoveredLink ? 'pointer' : 'default'
         }}
         className="block w-full h-full"
       />
@@ -964,7 +1065,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       <div className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-[#070b16]/75 border border-slate-850/80 rounded-xl p-1 px-2 shadow-2xl backdrop-blur-md transition-all select-none">
         <button
           onClick={() => {
-            const nextZoom = Math.min(10.0, zoomLevel * 1.25);
+            const nextZoom = Math.min(80.0, zoomLevel * 1.25);
             setZoomLevel(nextZoom);
             setOffsetX(clampOffsetX(offsetX, nextZoom));
           }}
