@@ -1,5 +1,26 @@
 # HISTORY.md
 
+## 2026-05-26 (공개 표면 정비 - GitHub Pages, README, 저장소 메타데이터)
+
+- 작업: GitHub Pages, README, 저장소 설명/토픽, 버전 표기 등 공개 사용자에게 보이는 표면을 최신 v0.9.0 상태에 맞게 점검하고 누락된 부분을 보완.
+- 변경 파일:
+  - `README.md`: 실제 Pages URL, 저장소 링크, v0.9.0 배지, 34만 개 교차 참조/LOD 기능 요약, GitHub 메타데이터 기준, 상대 attribution 링크 정리
+  - `LICENSE`: README에서 명시한 MIT 라이선스 파일 추가
+  - `package.json`, `package-lock.json`, `src/App.tsx`: 최신 공개 이력과 맞도록 v0.9.0 표기 동기화
+  - `index.html`: SEO/Open Graph/Twitter 설명과 공유 이미지 URL을 실제 Pages 배포 경로 기준으로 보강
+  - `AGENTS.md`, `docs/11_GITHUB_DEPLOYMENT.md`: 실제 저장소명과 Pages base 경로 기준으로 문서 정정
+  - `CHANGELOG.md`: 이번 공개 표면 정비 내역 기록
+- 검증:
+  - 로컬 `npm run lint`: ESLint 오류 없이 통과
+  - 로컬 `npm run typecheck`: TypeScript 타입 검사 통과
+  - 로컬 `npm run test`: Vitest projection 테스트 4건 통과
+  - 로컬 `npm run build`: Vite 프로덕션 빌드 성공
+  - 로컬 브라우저 프리뷰 `http://127.0.0.1:4173/scripture-flux-web/`: `v0.9.0 Premium` 배지와 Canvas 렌더링 확인
+  - 공개 Pages URL `https://jeiel85.github.io/scripture-flux-web/`: HTTP 200 확인
+  - 공개 공유 이미지 URL `https://jeiel85.github.io/scripture-flux-web/scriptureflux_landing.png`: HTTP 200 및 PNG 응답 확인
+  - GitHub 저장소 메타데이터: 설명, homepage, topics 반영 확인
+- 결과: 성공
+
 ## 2026-05-25 (v0.9.0 - 34만 개 실증 성경 교차 참조망 전체 통합 및 누락 필터 탑재)
 
 - 작업: OpenBible.info의 344,799개 대규모 교차 참조 데이터셋 TSV 파일을 연동 파이프라인에 탑재하여 실제 100% 매핑을 완료하고, 누락되었던 Same-Book(같은 책 내) 및 Same-Chapter(같은 장 내) 곡선 필터 2종을 구현 및 동적 통계 대시보드와 연동. 또한 호스팅 저장소명 변경에 맞춰 빌드 에셋 404 차단 결함을 완치.

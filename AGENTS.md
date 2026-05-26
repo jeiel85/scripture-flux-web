@@ -12,7 +12,7 @@
 
 ```text
 Project Name: ScriptureFlux
-Repository: https://github.com/jeiel85/scriptureflux.git (suggested; update after repository creation)
+Repository: https://github.com/jeiel85/scripture-flux-web.git
 Main Branch: main
 Primary Spec: README.md
 History Document: HISTORY.md

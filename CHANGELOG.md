@@ -1,5 +1,17 @@
 # CHANGELOG.md
 
+## Unreleased - 2026-05-26
+
+### Documentation
+- README의 GitHub Pages URL, 저장소 링크, 공개 메타데이터, 최신 v0.9.0 기능 요약을 현재 저장소 기준으로 정리했습니다.
+- GitHub 배포 가이드와 AGENTS 프로젝트 설정의 저장소명 및 Pages base 경로 예시를 `scripture-flux-web` 기준으로 동기화했습니다.
+- README에서 참조하던 로컬 `file:///` 링크를 저장소 상대 링크로 교체하고, 누락되어 있던 MIT `LICENSE` 파일을 추가했습니다.
+
+### Build / CI
+- `package.json`, `package-lock.json`, 앱 헤더 버전 배지를 `v0.9.0`으로 맞춰 공개 이력과 실제 표기가 어긋나지 않도록 정리했습니다.
+
+---
+
 ## v0.9.0 - 2026-05-25
 
 ### Added

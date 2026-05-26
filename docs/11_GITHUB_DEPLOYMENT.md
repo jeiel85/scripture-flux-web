@@ -2,10 +2,10 @@
 
 ## Repository name suggestions
 
-Recommended:
+Current repository:
 
 ```txt
-scriptureflux
+scripture-flux-web
 ```
 
 Alternatives:
@@ -106,10 +106,10 @@ jobs:
 
 ## Vite base path
 
-If deploying to:
+If deploying to the current GitHub Pages site:
 
 ```txt
-https://USERNAME.github.io/scriptureflux/
+https://jeiel85.github.io/scripture-flux-web/
 ```
 
 configure:
@@ -117,7 +117,7 @@ configure:
 ```ts
 // vite.config.ts
 export default defineConfig({
-  base: '/scriptureflux/',
+  base: '/scripture-flux-web/',
   plugins: [react()]
 });
 ```

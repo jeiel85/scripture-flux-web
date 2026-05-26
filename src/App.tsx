@@ -118,7 +118,7 @@ function App() {
               <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 m-0">
                 ScriptureFlux
                 <span className="text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
-                  v0.8.0 Premium
+                  v0.9.0 Premium
                 </span>
               </h1>
             </div>
