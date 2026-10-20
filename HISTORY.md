@@ -1,5 +1,21 @@
 # HISTORY.md
 
+## 2026-10-20 (PWA 설치 지원)
+
+- 작업: GitHub Pages 배포본을 설치형 PWA로 만들기 위해 매니페스트·서비스 워커·아이콘을 추가.
+- 변경 파일:
+  - `public/manifest.webmanifest`: 이름, `start_url`/`scope` `./`, standalone, 테마·배경색 `#0a0f1e`, 아이콘 목록.
+  - `public/sw.js`: 버전 상수가 붙은 캐시, 이전 캐시 정리, 내비게이션 network-first, 같은 출처 GET stale-while-revalidate(200 응답만 저장, Range·다른 출처 제외).
+  - `public/icons/`: 기존 로고(`public/favicon.png`)로 생성한 192·512·maskable 512·apple-touch 180 아이콘.
+  - `index.html`: manifest·apple-touch-icon·theme-color 태그.
+  - `src/main.tsx`: 배포 빌드에서만 `./sw.js` 등록.
+- 검증:
+  - 로컬 `npm run lint`, `npm run typecheck`, `npm run test`(4건), `npm run build`: 통과.
+  - `dist/`를 로컬 정적 서버의 `/scripture-flux-web/` 경로로 서빙해 매니페스트 파싱, 아이콘 실제 크기(192·512·512 maskable·180), `sw.js` 200 확인.
+  - 헤드리스 Chrome: 서비스 워커 scope `/scripture-flux-web/`, 활성화, 앱 셸 캐시 생성, 콘솔 오류 없음.
+- 결과: 성공
+- 후속 작업: 데이터 청크 캐시 용량 상한이 필요해지면 별도 검토.
+
 ## 2026-05-26 (v0.10.1 - 참조 연관 강도 필터 UI 직관성 개선)
 
 - 작업: 사용자가 '연관 강도(Weight) 필터 min. 0.10'이라는 기존 UI 표현을 더 직관적으로 이해할 수 있도록 용어를 '참조 연관 강도 필터' 및 '최소 {값}'으로 알기 쉽게 순화하고, 필터의 실질적인 기능과 작동 방식에 대한 친절한 보조 설명을 추가하여 UI 가독성을 극대화.
